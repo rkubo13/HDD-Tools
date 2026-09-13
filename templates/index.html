@@ -1,0 +1,213 @@
+{% extends "_base.html" %}
+
+{% block title %}Hard Drive Searcher{% endblock %}
+{% block heading %}Hard Drive Searcher{% endblock %}
+
+{% block subhead %}
+<p class="lead" id="lead">Select your desired storage capacity.</p>
+{% endblock %}
+
+{% block content %}
+<div id="pickerSlot"></div>
+
+<p class="foot-note">Listed weights correspond to individual carton units.</p>
+
+<div class="result" id="result"></div>
+{% endblock %}
+
+{% block script %}
+<script>
+  const result = document.getElementById('result');
+  const slot = document.getElementById('pickerSlot');
+
+  if (!CATALOG.length) {
+    document.getElementById('lead').remove();
+    result.innerHTML = '<p class="empty">No drive data loaded. Check that hdd.json sits next to app.py and contains valid JSON, then reload.</p>';
+  } else {
+    const chosen = [];          // products in the order they were picked
+    let editing = -1;           // nothing is armed to be overwritten until a chip is clicked
+    let restoreTo = null;       // where the ring goes back to if + is dismissed
+    let searchedOnce = false;   // the first pick of a visit searches on its own
+
+    const picker = createPicker({
+      variant: 'composer',
+      searchPlaceholder: 'Search by capacity, product ID, or SKU',
+      onSelect: p => add(p),
+      onClose: picked => {
+        // + was pressed but nothing came of it: put the ring back where it was
+        if (!picked && restoreTo !== null) {
+          editing = restoreTo;
+          renderPicks();
+        }
+        restoreTo = null;
+      }
+    });
+    slot.appendChild(picker.root);
+
+    /* control row: add another, clear, send */
+    const addBtn = iconButton('Add another drive', ICON_PLUS, e => {
+      e.stopPropagation();      // or the document handler closes it right back
+      if (restoreTo === null) restoreTo = editing;
+      editing = -1;             // + means the next pick joins the list
+      renderPicks();
+      picker.open(true);
+    }, 'icon-btn icon-btn--round tip--left');
+    addBtn.hidden = true;
+
+    const clearBtn = iconButton('Clear', ICON_CROSS, () => {
+      chosen.length = 0;
+      editing = -1;
+      searchedOnce = false;
+      picker.clear();
+      renderPicks();
+      renderHint();
+      picker.field.focus();
+    }, 'icon-btn icon-btn--quiet');
+
+    const sendBtn = iconButton('Send', ICON_ARROW, () => {
+      if (chosen.length) {
+        renderResults();
+        flashSent(sendBtn);
+      } else {
+        picker.takeFirst();
+        if (chosen.length) flashSent(sendBtn);
+      }
+    }, 'icon-btn icon-btn--send');
+
+    picker.bar.append(addBtn, el('span', 'spacer'), clearBtn, sendBtn);
+
+    /* the selected list sits under the control row */
+    const picks = el('div', 'composer__picks');
+    picks.hidden = true;
+    picker.root.appendChild(picks);
+
+    renderHint();
+    window.addEventListener('pageshow', () => picker.close(false));
+
+    function add(product) {
+      const already = chosen.findIndex(p => p.product_id === product.product_id);
+
+      if (already > -1) {
+        // already listed: leave the list alone rather than doubling it up
+      } else if (editing > -1 && editing < chosen.length) {
+        chosen[editing] = product;                  // a chip was clicked, so replace it
+        editing = -1;                               // and go back to arming nothing
+      } else {
+        chosen.push(product);
+      }
+
+      renderPicks();
+
+      // the first drive of a visit goes straight to a result; after that, Send does it
+      if (!searchedOnce) {
+        searchedOnce = true;
+        renderResults();
+      }
+    }
+
+    function drop(productId) {
+      const at = chosen.findIndex(p => p.product_id === productId);
+      if (at > -1) chosen.splice(at, 1);
+      if (at === editing) editing = -1;
+      else if (at < editing) editing -= 1;
+      renderPicks();
+      if (chosen.length) renderResults();
+      else { searchedOnce = false; renderHint(); }
+    }
+
+    function renderPicks() {
+      picks.innerHTML = '';
+      addBtn.hidden = chosen.length === 0;
+      picks.hidden = chosen.length === 0;
+      if (!chosen.length) return;
+
+      picks.appendChild(el('span', 'picks-label', 'Selected'));
+
+      chosen.forEach((product, index) => {
+        const chip = el('span', 'pick' + (index === editing ? ' is-editing' : ''));
+
+        const label = el('button', 'pick__edit');
+        label.type = 'button';
+        label.title = 'Replace this drive';
+        label.appendChild(el('b', null, product.product_id));
+        label.appendChild(el('span', null, product.capacity + ' TB'));
+        label.addEventListener('click', e => {
+          e.stopPropagation();        // keep the list from closing as it opens
+          if (editing === index) {    // clicking the armed chip again disarms it
+            editing = -1;
+            renderPicks();
+            return;
+          }
+          editing = index;
+          restoreTo = null;
+          renderPicks();
+          picker.open(true);
+        });
+        chip.appendChild(label);
+
+        const off = el('button', 'pick__drop');
+        off.type = 'button';
+        off.innerHTML = ICON_CROSS;
+        off.setAttribute('aria-label', 'Remove ' + product.product_id);
+        off.addEventListener('click', () => drop(product.product_id));
+        chip.appendChild(off);
+
+        picks.appendChild(chip);
+      });
+    }
+
+    function renderHint() {
+      result.innerHTML = '<p class="hint">The weight, product ID and SKU show up here once you pick a drive.</p>';
+    }
+
+    function spec(label, value, mono, copyable) {
+      const div = el('div');
+      div.appendChild(el('dt', null, label));
+
+      const val = el('div', 'val');
+      val.appendChild(el('dd', mono ? 'mono' : null, value));
+      if (copyable) val.appendChild(copyButton(label, value));
+      div.appendChild(val);
+
+      return div;
+    }
+
+    function renderResults() {
+      result.innerHTML = '';
+      chosen.forEach(product => result.appendChild(driveCard(product)));
+    }
+
+    function driveCard(product) {
+      const card = el('div', 'card');
+
+      const hero = el('div', 'hero');
+
+      const left = el('div', 'hero__left');
+      left.appendChild(productThumb(product));
+
+      const figure = el('div', 'figure');
+      figure.appendChild(el('span', null, String(product.weight)));
+      figure.appendChild(el('span', null, UNIT));
+      figure.appendChild(copyButton('weight', String(product.weight)));
+      left.appendChild(figure);
+      hero.appendChild(left);
+
+      const who = el('div', 'who');
+      who.appendChild(el('b', null, product.capacity + ' TB ' + (product.is_pro ? 'Pro' : 'Standard')));
+      who.appendChild(el('span', null, product.sku));
+      hero.appendChild(who);
+      card.appendChild(hero);
+
+      const specs = el('dl', 'specs');
+      specs.appendChild(spec('Product ID', product.product_id, true, true));
+      specs.appendChild(spec('SKU', product.sku, true, true));
+      specs.appendChild(spec('Capacity', product.capacity + ' TB'));
+      if (product.type) specs.appendChild(spec('Type', product.type));
+      specs.appendChild(spec('Weight', product.weight + ' ' + UNIT));
+      card.appendChild(specs);
+
+      return card;
+    }
+  }
+</script>
+{% endblock %}

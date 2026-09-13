@@ -1,0 +1,158 @@
+[
+    {
+        "capacity": 1,
+        "has_multiple": false,
+        "products": [{
+            "PC-HD-SATA1T": {
+                "item": "1TB",
+                "sku": "WD11PURZ",
+                "capacity": 1,
+                "type": "PURZ",
+                "weight": 22.15
+            }
+        }]
+    },
+    {
+        "capacity": 2,
+        "has_multiple": false,
+        "products": [{
+            "PC-HD-SATA2": {
+                "item": "2TB",
+                "sku": "DHWD23PURZ",
+                "capacity": 2,
+                "weight": 22.25
+            }
+        }]
+    },
+    {
+        "capacity": 3,
+        "has_multiple": false,
+        "products": [{
+            "PC-HD-SATA3T-33PURZ": {
+                "item": "3TB-33PURZ",
+                "sku": "DHWD33PURZ",
+                "capacity": 4,
+                "weight": 26.5
+            }
+        },
+        {
+            "PC-HD-SATA3T": {
+                "item": "3TB-34PURZ",
+                "sku": "DHWD34PURZ",
+                "capacity": 3,
+                "weight": 26
+            }
+        }]
+    },
+    {
+        "capacity": 4,
+        "has_multiple": false,
+        "products": [{
+            "PC-HD-SATA4T-43PURZ": {
+                "item": "4TB",
+                "sku": "DHWD43PURZ",
+                "capacity": 4,
+                "weight": 27.5
+            }
+        }]
+    },
+    {
+        "capacity": 6,
+        "has_multiple": false,
+        "products": [{
+            "PC-HD-SATA6T": {
+                "item": "6TB",
+                "sku": "WD64PURZ",
+                "capacity": 6,
+                "weight": 27.5
+            }
+        }]
+    },
+    {
+        "capacity": 8,
+        "has_multiple": true,
+        "products": [{
+            "PC-HD-SATA8T-85PURZ": {
+                "item": "8TB",
+                "sku": "DHWD85PURZ",
+                "capacity": 8,
+                "is_pro": false,
+                "weight": 33.25
+            }
+        },
+        {
+            "PC-HD-SATA8T-PRO": {
+                "item": "8TB PRO",
+                "sku": "DHWD8002PURP",
+                "capacity": 8,
+                "is_pro": true,
+                "weight": 33.25
+            }
+        }]
+    },
+    {
+        "capacity": 10,
+        "has_multiple": true,
+        "products": [{
+            "PC-HD-SATA10-PRO": {
+                "item": "10TB PRO",
+                "sku": "DHWD102PURP",
+                "capacity": 10,
+                "is_pro": true,
+                "weight": 33.5
+            }
+        }]
+    },
+    {
+        "capacity": 12,
+        "has_multiple": true,
+        "products": [{
+            "PC-HD-SATA12-PRO": {
+                "item": "12TB PRO",
+                "sku": "DHWD122PURP",
+                "capacity": 12,
+                "is_pro": true,
+                "weight": 34.5
+            }
+        }]
+    },
+    {
+        "capacity": 14,
+        "has_multiple": true,
+        "products": [{
+            "PC-HD-SATA14T-PRO": {
+                "item": "14TB PRO",
+                "sku": "DHWD142PURP",
+                "capacity": 14,
+                "is_pro": true,
+                "weight": 30.75
+            }
+        }]
+    },
+    {
+        "capacity": 18,
+        "has_multiple": true,
+        "products": [{
+            "PC-HD-SATA18T-PRO": {
+                "item": "18TB PRO",
+                "sku": "DHWD181PURP",
+                "capacity": 18,
+                "is_pro": true,
+                "weight": 31.65
+            }
+        }]
+    },
+    {
+        "capacity": 26,
+        "has_multiple": true,
+        "products": [{
+            "PC-HD-SATA26T-PRO": {
+                "item": "26TB PRO",
+                "sku": "HDWD260PURP",
+                "capacity": 26,
+                "is_pro": true,
+                "weight": 31
+            }
+        }]
+    }
+]

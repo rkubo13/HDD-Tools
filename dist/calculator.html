@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDD Pallet Dimensions Calculator</title>
+<style>
+  :root {
+    --brand: #465bf4;
+    --brand-deep: #3244d6;
+    --brand-soft: #eceffe;
+    --brand-line: #d5dbfb;
+    --ink: #1b1d28;
+    --ink-soft: #444a5e;
+    --muted: #6e7386;
+    --page: #f3f4f9;
+    --card: #ffffff;
+    --line: #e4e6ef;
+    --line-soft: #eef0f6;
+    --tint: #f4f5fa;
+    --accent: #ff4900;
+    --ok: #00996a;
+    --warn: #9a5b00;
+    --sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+    --lift: 0 12px 30px -20px rgba(19, 23, 45, .55);
+    --lift-high: 0 22px 48px -24px rgba(19, 23, 45, .5);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- shell ---------- */
+
+  .app { display: flex; min-height: 100vh; }
+
+  .rail {
+    position: sticky;
+    top: 0;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    width: 236px;
+    height: 100vh;
+    padding: 20px 14px 16px;
+    background: var(--brand);
+    color: #fff;
+  }
+  .rail__brand { display: flex; align-items: center; gap: 11px; padding: 6px 10px 20px; }
+  .rail__brand--logo { display: block; padding: 2px 4px 20px; }
+
+  .rail__logo {
+    display: block;
+    padding: 9px 13px;
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 10px 22px -16px rgba(0, 0, 0, .6);
+  }
+  .rail__logo img { display: block; width: 100%; height: auto; }
+  .rail__mark {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, .18);
+    overflow: hidden;
+  }
+  .rail__mark img { width: 100%; height: 100%; object-fit: contain; }
+  .rail__brand b { display: block; font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; }
+  .rail__brand span { display: block; font-size: 11.5px; color: rgba(255, 255, 255, .68); }
+
+  .rail__nav { display: flex; flex-direction: column; gap: 4px; }
+  .rail__link {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 12px;
+    border-radius: 13px;
+    color: rgba(255, 255, 255, .84);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.25;
+    text-decoration: none;
+  }
+  .rail__link svg { flex: none; opacity: .9; }
+  .rail__link:hover { background: rgba(255, 255, 255, .13); color: #fff; }
+  .rail__link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .rail__link.is-active {
+    background: #fff;
+    color: var(--brand);
+    font-weight: 620;
+    box-shadow: 0 10px 22px -14px rgba(0, 0, 0, .65);
+  }
+  .rail__link.is-active svg { opacity: 1; }
+
+  .workspace {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 58px 34px 72px;
+    /* colour gathers behind the title and drains away down the page */
+    background:
+      radial-gradient(130% 58% at 50% -12%, rgba(70, 91, 244, .20), rgba(70, 91, 244, 0) 62%),
+      linear-gradient(180deg, #e6eaff 0, rgba(230, 234, 255, 0) 430px),
+      var(--page);
+  }
+  .workspace__inner { max-width: 820px; margin: 0 auto; }
+  .workspace__inner--wide { max-width: 1060px; }
+
+  .page-head { margin-bottom: 22px; text-align: center; }
+  .page-head h1 {
+    margin: 0 0 6px;
+    font-size: 33px;
+    font-weight: 720;
+    letter-spacing: -0.028em;
+  }
+  .lead { margin: 0 auto; color: var(--muted); font-size: 13.5px; font-weight: 400; max-width: 56ch; }
+
+  /* the quiet line under the input, like a disclaimer */
+  .foot-note {
+    margin: 11px auto 0;
+    color: #8b90a2;
+    font-size: 11.5px;
+    text-align: center;
+  }
+
+  /* ---------- composer bubble ---------- */
+
+  .composer {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--lift);
+    transition: box-shadow .18s ease, border-color .18s ease;
+  }
+  .composer.is-open, .composer:focus-within { border-color: var(--brand-line); box-shadow: var(--lift-high); }
+
+  .composer__field {
+    width: 100%;
+    padding: 18px 22px 8px;
+    background: none;
+    border: 0;
+    color: var(--ink);
+    font: inherit;
+    font-size: 17px;
+  }
+  .composer__field::placeholder { color: #9aa0b4; }
+  .composer__field:focus { outline: none; }
+
+  .composer__list {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height .24s cubic-bezier(.32, .72, .35, 1), opacity .16s ease;
+  }
+  .composer.is-open .composer__list { max-height: 330px; opacity: 1; }
+
+  .composer__bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px 12px;
+  }
+  .composer__bar .spacer { flex: 1 1 auto; }
+
+  .composer__picks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 16px 14px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .composer__picks[hidden] { display: none; }
+  .composer__picks .picks-label { color: var(--muted); font-size: 11.5px; font-weight: 650; }
+
+  .pick {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 5px 5px 5px 12px;
+    border-radius: 999px;
+    background: var(--brand-soft);
+    color: var(--brand-deep);
+    font-size: 12.5px;
+  }
+  .pick b { font-family: var(--mono); font-size: 12px; font-weight: 650; }
+
+  .pick__edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    font-size: inherit;
+    cursor: pointer;
+  }
+  .pick__edit:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 999px; }
+
+  /* the chip the next pick will overwrite */
+  .pick.is-editing { background: var(--card); }
+  .pick.is-editing::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1.6px;
+    border-radius: inherit;
+    background: repeating-linear-gradient(45deg, var(--brand) 0 5px, transparent 5px 10px);
+    background-size: 14.15px 14.15px;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: ants 620ms linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes ants { to { background-position: 14.15px 0; } }
+
+  /* page opening: everything lifts into place once, staggered */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+  /* fill-mode is backwards, not both: an element still filling a transform
+     animation acts as the containing block for its fixed children, which sends
+     the hover sub-list off to the side of the screen */
+  .page-head h1 { animation: rise 520ms cubic-bezier(.22, .68, .3, 1) backwards 60ms; }
+  .page-head .lead { animation: rise 520ms cubic-bezier(.22, .68, .3, 1) backwards 140ms; }
+  .workspace > div > :nth-child(2) { animation: rise 560ms cubic-bezier(.22, .68, .3, 1) backwards 210ms; }
+  .workspace .foot-note { animation: rise 520ms cubic-bezier(.22, .68, .3, 1) backwards 300ms; }
+
+  /* ---------- product thumbnail ---------- */
+
+  .thumb {
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    flex: none;
+    overflow: hidden;
+    background: var(--tint);
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb svg { width: 78%; height: 78%; }
+  .hero .figure { flex: 0 1 auto; min-width: 0; }
+  .hero__left { display: flex; align-items: center; gap: 18px; min-width: 0; }
+  .pick__drop {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 50%;
+    color: var(--brand-deep);
+    cursor: pointer;
+    opacity: .65;
+  }
+  .pick__drop:hover { background: rgba(70, 91, 244, .16); opacity: 1; }
+  .pick__drop:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+  .composer--form { padding: 6px 6px 0; }
+  .composer--form .composer__bar { padding: 10px 8px 10px; border-top: 1px solid var(--line-soft); margin-top: 4px; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    max-width: 100%;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--tint);
+    color: var(--muted);
+    font-size: 13px;
+    overflow: hidden;
+  }
+  .pill b { color: var(--ink); font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
+  .pill[hidden] { display: none; }
+
+  .icon-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    padding: 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .icon-btn:hover { background: var(--tint); color: var(--ink); }
+  .icon-btn:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .icon-btn[hidden] { display: none; }
+  .icon-btn--round { border-radius: 50%; }
+  .icon-btn--quiet { border-color: transparent; background: none; color: var(--muted); }
+  .icon-btn--quiet:hover { background: var(--tint); }
+  .icon-btn--send {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+    transition: background .18s ease, border-color .18s ease;
+  }
+  .icon-btn--send:hover { background: var(--brand-deep); color: #fff; }
+  .icon-btn--send.is-sent { background: var(--ok); border-color: var(--ok); }
+
+  /* one ring leaving the button, so a repeat send still reads as a send */
+  .icon-btn--send::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 15px;
+    border: 2px solid var(--ok);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .icon-btn--send.is-sent::before { animation: sent-ring .6s cubic-bezier(.25, .8, .4, 1); }
+
+  @keyframes sent-ring {
+    from { transform: scale(.86); opacity: .6; }
+    to { transform: scale(1.5); opacity: 0; }
+  }
+
+  /* shared hover hint, used by icon buttons and copy buttons */
+  .tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 7px);
+    padding: 5px 9px;
+    background: var(--ink);
+    color: #fff;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .12s ease;
+    z-index: 40;
+  }
+  .tip:hover::after, .tip:focus-visible::after, .tip.is-done::after, .tip.is-fail::after { opacity: 1; }
+  .tip--left::after { right: auto; left: 0; }
+
+  /* ---------- dropdown internals ---------- */
+
+  .picker { position: relative; }
+
+  .trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px;
+    background: var(--tint);
+    border: 1px solid transparent;
+    border-radius: 14px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .trigger:hover { background: #eceef6; }
+  .trigger[aria-expanded="true"] { background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .trigger .chev { flex: none; color: var(--muted); transition: transform .15s ease; }
+  .trigger[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .trigger .placeholder { color: #9aa0b4; }
+  .trigger .picked { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .panel {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 7px);
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--lift-high);
+    overflow: hidden;
+  }
+  .panel[hidden] { display: none; }
+
+  .panel-search { padding: 9px; border-bottom: 1px solid var(--line-soft); }
+  .search {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--tint);
+    border: 1px solid transparent;
+    border-radius: 11px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+  }
+  .search::placeholder { color: #9aa0b4; }
+  .search:focus { outline: none; background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 20px;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+  .head .h-cap { flex: none; min-width: 70px; }
+  .head .h-name { flex: 1 1 auto; }
+  .head .h-sku { flex: none; margin-left: auto; }
+  .head .h-sku[hidden] { display: none; }
+
+  .menu { margin: 0; padding: 7px; list-style: none; max-height: 270px; overflow-y: auto; }
+  .menu > li { position: relative; }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 12px;
+    background: none;
+    border: 0;
+    border-radius: 12px;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .row:hover, .row:focus-visible { background: var(--tint); outline: none; }
+  .row:focus-visible { box-shadow: inset 0 0 0 2px var(--brand); }
+  .row[aria-current="true"] { background: var(--brand-soft); color: var(--brand-deep); }
+
+  .row .cap { flex: none; min-width: 70px; font-size: 15.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .row .name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .row .code { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .row .count { flex: none; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .row .sep { color: #b8bdcd; margin: 0 5px; }
+  .row .arrow { flex: none; color: var(--muted); transition: transform .15s ease; }
+  li.group.is-open > .row .arrow { transform: rotate(90deg); }
+
+  /* the sub-list keeps its own bubble */
+  .flyout { display: none; }
+  .flyout ul { margin: 0; padding: 7px; list-style: none; }
+  .flyout .stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .flyout .stack b { font-weight: 600; font-size: 13.5px; }
+
+  @media (min-width: 900px) {
+    .flyout {
+      position: fixed;
+      z-index: 60;
+      padding-left: 8px;
+      width: 296px;
+    }
+    .flyout .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--lift-high);
+    }
+    li.group:hover > .flyout, li.group.is-open > .flyout { display: block; }
+    .flyout .row { min-height: 50px; }
+    .flyout .row .cap { display: none; }
+  }
+
+  @media (max-width: 899px) {
+    .flyout { padding: 2px 0 6px 20px; }
+    li.group.is-open > .flyout { display: block; }
+    .flyout .card { border-left: 2px solid var(--brand-line); }
+    .flyout .row { min-height: 50px; }
+    .flyout .row .cap { display: none; }
+  }
+
+  .picker--compact .trigger { min-height: 42px; }
+  .picker--compact .menu { max-height: 226px; }
+  .picker--compact .row { min-height: 38px; padding: 5px 10px; gap: 10px; }
+  .picker--compact .row .cap { min-width: 54px; font-size: 14px; }
+  .picker--compact .row .name { font-size: 13.5px; }
+  .picker--compact .head { padding: 8px 14px; font-size: 11px; }
+  .picker--compact .head .h-cap { min-width: 54px; }
+
+  /* ---------- cards and results ---------- */
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: var(--lift);
+  }
+
+  .result { margin-top: 24px; display: grid; gap: 16px; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+
+  .stat {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 20px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: var(--lift);
+  }
+  .stat__icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: none;
+    border-radius: 13px;
+    background: var(--brand-soft);
+    color: var(--brand);
+  }
+  .stat__icon--amber { background: #fff1e2; color: #c2550a; }
+  .stat__icon--slate { background: #eef0f6; color: var(--ink-soft); }
+  .stat__body { min-width: 0; flex: 1 1 auto; }
+  .stat__label { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  .stat__value {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+  }
+  .stat__value small { font-size: 14px; font-weight: 550; color: var(--muted); letter-spacing: 0; }
+  .stat .copy { margin-left: auto; }
+
+  .hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .hero .figure { display: flex; align-items: baseline; gap: 9px; font-variant-numeric: tabular-nums; letter-spacing: -0.035em; }
+  .hero .figure span:first-child { font-size: 58px; font-weight: 700; line-height: .92; }
+  .hero .figure span:nth-child(2) { font-size: 19px; font-weight: 550; color: var(--muted); letter-spacing: 0; }
+  .hero .figure .copy { align-self: center; margin-left: 4px; }
+  .hero .who { text-align: right; max-width: 46%; }
+  .hero .who b { display: block; font-size: 22px; font-weight: 650; letter-spacing: -0.015em; }
+  .hero .who span { font-family: var(--mono); font-size: 16px; color: var(--muted); word-break: break-all; }
+
+  dl.specs { margin: 0; padding: 6px 24px 14px; }
+  dl.specs > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  dl.specs > div:last-child { border-bottom: 0; }
+  dl.specs dt { flex: none; color: var(--muted); font-size: 13.5px; }
+  dl.specs .val { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
+  dl.specs dd { margin: 0; font-size: 14.5px; font-weight: 550; text-align: right; }
+  dl.specs dd.mono { font-family: var(--mono); font-size: 13.5px; font-weight: 500; word-break: break-all; }
+
+  .hint, .empty {
+    margin: 0;
+    padding: 22px 24px;
+    color: var(--muted);
+    background: var(--card);
+    border: 1px dashed var(--brand-line);
+    border-radius: 20px;
+    font-size: 14px;
+  }
+  .empty { border-style: solid; border-left: 3px solid var(--brand); }
+
+  .reset {
+    margin-top: 14px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--brand);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 550;
+    cursor: pointer;
+  }
+  .reset:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .copy {
+    position: relative;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .copy:hover { background: var(--tint); border-color: var(--line); color: var(--ink); }
+  .copy:focus-visible { outline: none; color: var(--ink); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .copy.is-done { color: var(--ok); }
+
+  /* ---------- calculator rows ---------- */
+
+  .lines { display: flex; flex-direction: column; gap: 8px; padding: 4px 6px 0; }
+
+  .line, .line-head {
+    display: grid;
+    grid-template-columns: 22px 1fr 140px 34px;
+    align-items: center;
+    gap: 10px;
+  }
+  .line-head { padding: 6px 6px 0; color: var(--muted); font-size: 11.5px; font-weight: 600; }
+
+  .line__n { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; text-align: right; }
+  .qty {
+    width: 100%;
+    height: 42px;
+    padding: 0 8px 0 13px;
+    background: var(--tint);
+    border: 1px solid transparent;
+    border-radius: 14px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .qty:hover { background: #eceef6; }
+  .qty:focus { outline: none; background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .line.is-bad .qty, .line.is-bad .trigger { border-color: #d24b3c; background: #fef6f5; }
+
+  .line__rm {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    color: var(--muted);
+    font: inherit;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .line__rm:hover { background: var(--tint); border-color: var(--line); color: var(--ink); }
+  .line__rm:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .line__rm[hidden] { visibility: hidden; display: block; }
+
+  /* ---------- pallet block and table ---------- */
+
+  .wire { display: grid; gap: 14px; }
+  .wire__rows { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .wire__send { display: flex; justify-content: flex-end; }
+
+  .send-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 18px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: var(--lift);
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .send-btn:hover { border-color: var(--brand-line); color: var(--brand-deep); }
+  .send-btn:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .send-btn.is-done { color: var(--ok); border-color: #b9e6d6; }
+  .send-btn span { display: inline-flex; align-items: center; }
+
+  .detail-split { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); }
+  .detail-split > .pane { min-width: 0; padding-top: 4px; }
+  .detail-split > .stage { border-left: 1px solid var(--line-soft); }
+
+  .stage { display: flex; flex-direction: column; justify-content: center; padding: 12px 16px 16px; }
+  .stage svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    cursor: grab;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .stage svg.is-turning { cursor: grabbing; }
+  .stage figcaption { margin-top: 8px; color: var(--muted); font-size: 12.5px; text-align: center; }
+  .stage figcaption .stage__dims {
+    display: block;
+    margin-top: 2px;
+    color: var(--ink);
+    font-size: 11.5px;
+    font-weight: 650;
+  }
+
+  table.breakdown { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.breakdown th, table.breakdown td {
+    padding: 10px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  table.breakdown th { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+  table.breakdown th:first-child, table.breakdown td:first-child { padding-left: 22px; text-align: left; }
+  table.breakdown th:last-child, table.breakdown td:last-child { padding-right: 20px; }
+  table.breakdown td { font-variant-numeric: tabular-nums; }
+  table.breakdown td.id { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  table.breakdown tr:last-child td { border-bottom: 0; }
+  table.breakdown tfoot td { font-weight: 650; border-top: 1px solid var(--line); }
+
+  .problem {
+    margin: 18px 0 0;
+    padding: 15px 18px;
+    background: #fef6f5;
+    border: 1px solid #f3cdc7;
+    border-left: 3px solid #d24b3c;
+    border-radius: 16px;
+    color: #7f2b20;
+    font-size: 14px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+    .icon-btn--send.is-sent::before { animation: none; }
+    .pick.is-editing::before { animation: none; }
+    .page-head h1, .page-head .lead,
+    .workspace > div > :nth-child(2), .workspace .foot-note { animation: none; }
+  }
+
+  /* ---------- narrow screens ---------- */
+
+  @media (max-width: 940px) {
+    .app { flex-direction: column; }
+    .rail {
+      position: static;
+      width: auto;
+      height: auto;
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+    }
+    .rail__brand { padding: 0 12px 0 0; }
+    .rail__brand--logo { padding: 0 12px 0 0; }
+    .rail__logo { width: 148px; padding: 7px 10px; border-radius: 12px; }
+    .rail__brand div { white-space: nowrap; }
+    .rail__nav { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .rail__link { white-space: nowrap; padding: 9px 12px; font-size: 13.5px; }
+    .workspace { padding: 22px 18px 60px; }
+    .detail-split { grid-template-columns: 1fr; }
+    .detail-split > .stage { border-left: 0; border-top: 1px solid var(--line-soft); }
+    .wire__rows { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 620px) {
+    .line, .line-head {
+      grid-template-columns: 22px 1fr 34px;
+      grid-template-areas: "n pick rm" ". qty qty";
+      row-gap: 8px;
+    }
+    .line__n { grid-area: n; }
+    .line__pick { grid-area: pick; }
+    .line__qty { grid-area: qty; }
+    .line__rm { grid-area: rm; }
+    .line-head span:nth-child(3) { display: none; }
+    .hero { flex-direction: column; align-items: flex-start; }
+    .hero__left { gap: 14px; }
+    .thumb { width: 64px; height: 64px; border-radius: 13px; }
+    .hero .who { text-align: left; max-width: 100%; }
+    .hero .figure span:first-child { font-size: 48px; }
+    .workspace { padding: 18px 14px 50px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="rail">
+    <div class="rail__brand rail__brand--logo">
+      
+      <span class="rail__logo"><img src="data:image/png;base64,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" alt="BV"></span>
+      
+    </div>
+
+    <nav class="rail__nav">
+      <a class="rail__link" href="index.html">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="9" cy="9" r="5.6" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M13.2 13.2 17 17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        Hard Drive Searcher
+      </a>
+      <a class="rail__link is-active" href="calculator.html">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M10 2.4 17.2 6 10 9.6 2.8 6 10 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M2.8 10 10 13.6 17.2 10" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M2.8 14 10 17.6 17.2 14" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+        Pallet Dimensions Calculator
+      </a>
+    </nav>
+  </aside>
+
+  <main class="workspace">
+    <div class="workspace__inner workspace__inner--wide">
+
+      <header class="page-head">
+        <h1>Pallet Dimensions Calculator</h1>
+        
+<p class="lead" id="lead">Enter Product ID and individual units ordered.</p>
+
+      </header>
+
+      
+<div class="composer composer--form" id="composer">
+  <div class="line-head" aria-hidden="true">
+    <span></span>
+    <span>Product</span>
+    <span>HDD Units</span>
+    <span></span>
+  </div>
+
+  <div class="lines" id="lines"></div>
+
+  <div class="composer__bar" id="formBar"></div>
+</div>
+
+<p class="foot-note">Calculations require full-case quantities; partial cartons are not supported.</p>
+
+<div class="result" id="out"></div>
+
+
+    </div>
+  </main>
+
+</div>
+
+<script>
+  const CATALOG = [{"capacity": 1, "has_multiple": false, "label": "1 TB", "products": [{"capacity": 1, "is_pro": false, "item": "1TB", "product_id": "PC-HD-SATA1T", "sku": "WD11PURZ", "type": "PURZ", "weight": 22.15}]}, {"capacity": 2, "has_multiple": false, "label": "2 TB", "products": [{"capacity": 2, "is_pro": false, "item": "2TB", "product_id": "PC-HD-SATA2", "sku": "DHWD23PURZ", "type": null, "weight": 22.25}]}, {"capacity": 3, "has_multiple": true, "label": "3 TB", "products": [{"capacity": 3, "is_pro": false, "item": "3TB-33PURZ", "product_id": "PC-HD-SATA3T-33PURZ", "sku": "DHWD33PURZ", "type": null, "weight": 26.5}, {"capacity": 3, "is_pro": false, "item": "3TB-34PURZ", "product_id": "PC-HD-SATA3T", "sku": "DHWD34PURZ", "type": null, "weight": 26}]}, {"capacity": 4, "has_multiple": false, "label": "4 TB", "products": [{"capacity": 4, "is_pro": false, "item": "4TB", "product_id": "PC-HD-SATA4T-43PURZ", "sku": "DHWD43PURZ", "type": null, "weight": 27.5}]}, {"capacity": 6, "has_multiple": false, "label": "6 TB", "products": [{"capacity": 6, "is_pro": false, "item": "6TB", "product_id": "PC-HD-SATA6T", "sku": "WD64PURZ", "type": null, "weight": 27.5}]}, {"capacity": 8, "has_multiple": true, "label": "8 TB", "products": [{"capacity": 8, "is_pro": false, "item": "8TB", "product_id": "PC-HD-SATA8T-85PURZ", "sku": "DHWD85PURZ", "type": null, "weight": 33.25}, {"capacity": 8, "is_pro": true, "item": "8TB PRO", "product_id": "PC-HD-SATA8T-PRO", "sku": "DHWD8002PURP", "type": null, "weight": 33.25}]}, {"capacity": 10, "has_multiple": false, "label": "10 TB", "products": [{"capacity": 10, "is_pro": true, "item": "10TB PRO", "product_id": "PC-HD-SATA10-PRO", "sku": "DHWD102PURP", "type": null, "weight": 33.5}]}, {"capacity": 12, "has_multiple": false, "label": "12 TB", "products": [{"capacity": 12, "is_pro": true, "item": "12TB PRO", "product_id": "PC-HD-SATA12-PRO", "sku": "DHWD122PURP", "type": null, "weight": 34.5}]}, {"capacity": 14, "has_multiple": false, "label": "14 TB", "products": [{"capacity": 14, "is_pro": true, "item": "14TB PRO", "product_id": "PC-HD-SATA14T-PRO", "sku": "DHWD142PURP", "type": null, "weight": 30.75}]}, {"capacity": 18, "has_multiple": false, "label": "18 TB", "products": [{"capacity": 18, "is_pro": true, "item": "18TB PRO", "product_id": "PC-HD-SATA18T-PRO", "sku": "DHWD181PURP", "type": null, "weight": 31.65}]}, {"capacity": 26, "has_multiple": false, "label": "26 TB", "products": [{"capacity": 26, "is_pro": true, "item": "26TB PRO", "product_id": "PC-HD-SATA26T-PRO", "sku": "HDWD260PURP", "type": null, "weight": 31}]}];
+  const UNIT = "lb";
+  const PALLET = {"box": {"height": 9, "length": 20, "width": 11}, "boxes_per_layer": 8, "cols": 2, "drives_per_box": 20, "rows": 4};
+  const PRODUCTS = CATALOG.flatMap(g => g.products);
+
+  const wide = () => window.matchMedia('(min-width: 720px)').matches;
+
+  function el(tag, cls, text) {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function svgIcon(cls, size, path) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', cls);
+    svg.setAttribute('width', size);
+    svg.setAttribute('height', size);
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = path;
+    return svg;
+  }
+
+  const CHEVRON = '<path d="M3.5 6L8 10.5 12.5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>';
+  const CARET = '<path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>';
+
+  /* ---------- copy ---------- */
+
+  const ICON_COPY = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">'
+    + '<rect x="5.6" y="5.6" width="8.8" height="8.8" rx="1.8" stroke="currentColor" stroke-width="1.4"/>'
+    + '<path d="M11 4.4V3.7A1.7 1.7 0 009.3 2H3.7A1.7 1.7 0 002 3.7v5.6A1.7 1.7 0 003.7 11h.7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  const ICON_DONE = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">'
+    + '<path d="M3 8.6l3.1 3.1L13 4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  async function writeClipboard(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (err) { /* fall through to the textarea route */ }
+
+    // Plain http:// (an office PC on the LAN) has no clipboard API.
+    try {
+      const scratch = document.createElement('textarea');
+      scratch.value = text;
+      scratch.setAttribute('readonly', '');
+      scratch.style.position = 'fixed';
+      scratch.style.top = '-1000px';
+      document.body.appendChild(scratch);
+      scratch.select();
+      const ok = document.execCommand('copy');
+      scratch.remove();
+      return ok;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function copyButton(label, value) {
+    const button = el('button', 'copy tip');
+    button.type = 'button';
+    button.innerHTML = ICON_COPY;
+    button.dataset.tip = 'Copy ' + label;
+    button.setAttribute('aria-label', 'Copy ' + label);
+
+    button.addEventListener('click', async () => {
+      const ok = await writeClipboard(value);
+      button.innerHTML = ok ? ICON_DONE : ICON_COPY;
+      button.dataset.tip = ok ? 'Copied' : 'Copy failed — select it by hand';
+      button.classList.add(ok ? 'is-done' : 'is-fail');
+      clearTimeout(button._revert);
+      button._revert = setTimeout(() => {
+        button.innerHTML = ICON_COPY;
+        button.dataset.tip = 'Copy ' + label;
+        button.classList.remove('is-done', 'is-fail');
+      }, 1600);
+    });
+
+    return button;
+  }
+
+  const IMAGES = {};
+
+  /* A 3.5 in drive from above, for products with no photo on file. */
+  const DRIVE_ART = '<svg viewBox="0 0 100 100" fill="none" aria-hidden="true">'
+    + '<rect x="24" y="6" width="52" height="88" rx="5" fill="#c9ced9"/>'
+    + '<rect x="27" y="9" width="46" height="82" rx="3.5" fill="#dfe3ea"/>'
+    + '<circle cx="50" cy="44" r="27" fill="#aeb5c4"/>'
+    + '<circle cx="50" cy="44" r="24.5" fill="#eceff4"/>'
+    + '<circle cx="50" cy="44" r="8" fill="#c2c8d4"/>'
+    + '<circle cx="50" cy="44" r="3.4" fill="#8e97a8"/>'
+    + '<path d="M70 84a5 5 0 0 1-4.6-3L52 50.5l5.6-2.6L72 78a5 5 0 0 1-2 6Z" fill="#b6bdca"/>'
+    + '<circle cx="70" cy="82" r="4.6" fill="#9aa3b3"/>'
+    + '<g fill="#aeb5c4">'
+    + '<circle cx="31" cy="13" r="2.4"/><circle cx="69" cy="13" r="2.4"/>'
+    + '<circle cx="31" cy="87" r="2.4"/><circle cx="69" cy="87" r="2.4"/></g>'
+    + '<rect x="27" y="72" width="46" height="19" rx="3" fill="#2f3545" opacity=".08"/></svg>';
+
+  function productThumb(product) {
+    const box = el('span', 'thumb');
+    const src = IMAGES[product.product_id];
+
+    if (src) {
+      const img = el('img');
+      img.src = src;
+      img.alt = product.product_id;
+      img.loading = 'lazy';
+      box.appendChild(img);
+    } else {
+      box.innerHTML = DRIVE_ART;
+    }
+
+    return box;
+  }
+
+  /* ---------- small buttons ---------- */
+
+  const ICON_PLUS = '<svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
+    + '<path d="M9 3.6v10.8M3.6 9h10.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  const ICON_CROSS = '<svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
+    + '<path d="M4.6 4.6l8.8 8.8M13.4 4.6l-8.8 8.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  const ICON_ARROW = '<svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
+    + '<path d="M9 14.4V3.9M4.4 8.5 9 3.9l4.6 4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* Confirms a send even when the results below look unchanged. */
+  function flashSent(button) {
+    button.classList.remove('is-sent');
+    void button.offsetWidth;            // rewind the ring so repeat sends replay it
+    button.classList.add('is-sent');
+    button.innerHTML = ICON_DONE;
+
+    clearTimeout(button._sent);
+    button._sent = setTimeout(() => {
+      button.classList.remove('is-sent');
+      button.innerHTML = ICON_ARROW;
+    }, 1150);
+  }
+
+  function iconButton(tip, icon, onClick, cls) {
+    const button = el('button', (cls || 'icon-btn') + ' tip');
+    button.type = 'button';
+    button.innerHTML = icon;
+    button.dataset.tip = tip;
+    button.setAttribute('aria-label', tip);
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  /* ---------- picker ----------
+     One capacity list, reused by the lookup page and by every calculator row.
+     options:
+       variant         'composer' for the bubble that unfolds into its own list,
+                       'compact' for the trigger + floating panel used in rows
+       placeholder     trigger text before anything is picked
+       label           what the trigger shows once picked: (product) => string
+       onSelect        (product) => void
+  */
+
+  function createPicker(options) {
+    const opts = Object.assign({
+      variant: 'compact',                 // 'composer' is the big bubble on the lookup page
+      placeholder: 'Choose a capacity',
+      searchPlaceholder: 'Filter by Capacity, Product ID, or SKU',
+      label: p => p.capacity + ' TB · ' + p.product_id,
+      onSelect: () => {},
+      onOpen: () => {},
+      onClose: () => {}       // gets true when the close followed a pick
+    }, options || {});
+
+    const composerMode = opts.variant === 'composer';
+    let selectedId = null;
+    let showing = false;
+    let picking = false;      // true only while a pick is closing the list
+
+    const search = el('input', composerMode ? 'composer__field' : 'search');
+    search.type = 'text';
+    search.placeholder = opts.searchPlaceholder;
+    search.autocomplete = 'off';
+    search.spellcheck = false;
+    search.setAttribute('aria-label', 'Search by capacity, product ID, or SKU');
+
+    const head = el('div', 'head');
+    const headCap = el('span', 'h-cap', 'Capacity');
+    const headName = el('span', 'h-name', 'Product ID');
+    const headSku = el('span', 'h-sku', 'SKU');
+    head.append(headCap, headName, headSku);
+
+    const menu = el('ul', 'menu');
+
+    let root, panel, trigger = null, triggerLabel = null, bar = null;
+
+    if (composerMode) {
+      // search bar and list are one bubble: the list unfolds inside it
+      root = el('div', 'composer');
+      panel = el('div', 'composer__list');
+      panel.append(head, menu);
+      bar = el('div', 'composer__bar');
+      root.append(search, panel, bar);
+    } else {
+      root = el('div', 'picker picker--compact');
+      trigger = el('button', 'trigger');
+      trigger.type = 'button';
+      trigger.setAttribute('aria-haspopup', 'true');
+      trigger.setAttribute('aria-expanded', 'false');
+      triggerLabel = el('span', 'placeholder', opts.placeholder);
+      trigger.appendChild(triggerLabel);
+      trigger.appendChild(svgIcon('chev', '16', CHEVRON));
+
+      panel = el('div', 'panel');
+      panel.hidden = true;
+      const wrap = el('div', 'panel-search');
+      wrap.appendChild(search);
+      panel.append(wrap, head, menu);
+      root.append(trigger, panel);
+    }
+
+    /* rows */
+
+    function productRow(product, flat) {
+      const row = el('button', 'row');
+      row.type = 'button';
+      row.dataset.productId = product.product_id;
+      if (product.product_id === selectedId) row.setAttribute('aria-current', 'true');
+
+      row.appendChild(el('span', 'cap', product.capacity + ' TB'));
+
+      if (flat) {
+        // filter results: capacity on the left, then Product ID · SKU
+        const line = el('div', 'name');
+        line.appendChild(el('b', null, product.product_id));
+        line.appendChild(el('span', 'sep', '·'));
+        line.appendChild(el('span', 'code', product.sku));
+        row.appendChild(line);
+      } else {
+        // flyout: Product ID over SKU
+        const stack = el('div', 'stack');
+        stack.appendChild(el('b', null, product.product_id));
+        stack.appendChild(el('span', 'code', product.sku));
+        row.appendChild(stack);
+      }
+
+      row.addEventListener('click', () => select(product.product_id));
+      return row;
+    }
+
+    function renderMenu(query) {
+      menu.innerHTML = '';
+      const q = query.trim().toLowerCase();
+
+      // filter results merge Product ID and SKU into one column
+      headName.textContent = q ? 'Product ID · SKU' : 'Product ID';
+      headSku.hidden = Boolean(q);
+
+      if (q) {
+        const hits = PRODUCTS.filter(p =>
+          (p.capacity + 'tb ' + p.item + ' ' + p.sku + ' ' + p.product_id).toLowerCase().includes(q)
+        );
+        if (!hits.length) {
+          const li = el('li');
+          const miss = el('div', 'row', 'Nothing matches “' + query.trim() + '”');
+          miss.style.color = 'var(--muted)';
+          li.appendChild(miss);
+          menu.appendChild(li);
+          return;
+        }
+        hits.forEach(p => {
+          const li = el('li');
+          li.appendChild(productRow(p, true));
+          menu.appendChild(li);
+        });
+        return;
+      }
+
+      CATALOG.forEach(group => {
+        const li = el('li');
+
+        if (!group.has_multiple) {
+          const only = group.products[0];
+          const row = el('button', 'row');
+          row.type = 'button';
+          row.dataset.productId = only.product_id;
+          if (only.product_id === selectedId) row.setAttribute('aria-current', 'true');
+          row.appendChild(el('span', 'cap', group.label));
+          row.appendChild(el('span', 'name', only.product_id));
+          row.appendChild(el('span', 'count', only.sku));
+          row.addEventListener('click', () => select(only.product_id));
+          li.appendChild(row);
+        } else {
+          li.className = 'group';
+
+          const parent = el('button', 'row');
+          parent.type = 'button';
+          parent.setAttribute('aria-haspopup', 'true');
+          parent.setAttribute('aria-expanded', 'false');
+          parent.appendChild(el('span', 'cap', group.label));
+          parent.appendChild(el('span', 'name', 'View Products'));
+          parent.appendChild(svgIcon('arrow', '14', CARET));
+          li.appendChild(parent);
+
+          const flyout = el('div', 'flyout');
+          const card = el('div', 'card');
+          const list = el('ul');
+          group.products.forEach(p => {
+            const child = el('li');
+            child.appendChild(productRow(p, false));
+            list.appendChild(child);
+          });
+          card.appendChild(list);
+          flyout.appendChild(card);
+          li.appendChild(flyout);
+
+          li.addEventListener('mouseenter', () => placeFlyout(li));
+          parent.addEventListener('click', () => toggleGroup(li));
+          parent.addEventListener('focus', () => placeFlyout(li));
+        }
+
+        menu.appendChild(li);
+      });
+    }
+
+    function placeFlyout(li) {
+      if (!wide()) return;
+      const flyout = li.querySelector('.flyout');
+      const anchor = li.getBoundingClientRect();
+
+      // park it at 0,0 first: where that lands tells us what the browser is
+      // measuring from, which is not always the viewport
+      flyout.style.left = '0px';
+      flyout.style.top = '0px';
+      flyout.style.display = 'block';
+      const origin = flyout.getBoundingClientRect();
+      const width = origin.width || flyout.offsetWidth;
+      const height = origin.height || flyout.offsetHeight;
+      flyout.style.display = '';
+
+      const left = Math.max(12, Math.min(anchor.right, window.innerWidth - width - 12));
+      const top = Math.max(12, Math.min(Math.max(12, anchor.top - 8), window.innerHeight - height - 12));
+
+      flyout.style.left = (left - origin.left) + 'px';
+      flyout.style.top = (top - origin.top) + 'px';
+    }
+
+    function toggleGroup(li) {
+      const open = li.classList.toggle('is-open');
+      li.querySelector('.row').setAttribute('aria-expanded', String(open));
+      if (open) {
+        placeFlyout(li);
+        menu.querySelectorAll('li.group.is-open').forEach(other => {
+          if (other !== li) closeGroup(other);
+        });
+      }
+    }
+
+    function closeGroup(li) {
+      li.classList.remove('is-open');
+      const row = li.querySelector('.row');
+      if (row) row.setAttribute('aria-expanded', 'false');
+    }
+
+    /* open / close */
+
+    function open(focusSearch) {
+      showing = true;
+      if (composerMode) root.classList.add('is-open');
+      else panel.hidden = false;
+      if (trigger) trigger.setAttribute('aria-expanded', 'true');
+      renderMenu(search.value);
+      if (focusSearch) search.focus();
+      opts.onOpen();
+    }
+
+    function close(refocus) {
+      showing = false;
+      if (composerMode) root.classList.remove('is-open');
+      else panel.hidden = true;
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      menu.querySelectorAll('li.group.is-open').forEach(closeGroup);
+      if (refocus) (trigger || search).focus();
+      opts.onClose(picking);
+      picking = false;
+    }
+
+    function select(productId) {
+      const product = PRODUCTS.find(p => p.product_id === productId);
+      if (!product) return;
+      selectedId = productId;
+      if (triggerLabel) {
+        triggerLabel.textContent = opts.label(product);
+        triggerLabel.className = 'picked';
+      }
+      search.value = '';
+      picking = true;
+      close(true);
+      opts.onSelect(product);
+    }
+
+    function clear() {
+      selectedId = null;
+      if (triggerLabel) {
+        triggerLabel.textContent = opts.placeholder;
+        triggerLabel.className = 'placeholder';
+      }
+      search.value = '';
+      renderMenu('');
+    }
+
+    if (trigger) {
+      trigger.addEventListener('click', () => showing ? close(false) : open(true));
+    }
+
+    // the search bar opens the same menu
+    search.addEventListener('focus', () => { if (!showing) open(false); });
+    search.addEventListener('click', () => { if (!showing) open(false); });
+    search.addEventListener('input', () => {
+      if (!showing) open(false);
+      renderMenu(search.value);
+    });
+
+    // Enter in the search bar takes the first match
+    search.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const first = rows()[0];
+      if (first) { first.click(); e.preventDefault(); }
+    });
+
+    document.addEventListener('click', e => {
+      if (showing && !root.contains(e.target)) close(false);
+    });
+
+    // a scrolled menu would leave an open flyout behind
+    menu.addEventListener('scroll', () => {
+      const openLi = menu.querySelector('li.group.is-open') || menu.querySelector('li.group:hover');
+      if (openLi) placeFlyout(openLi);
+    });
+
+    /* keyboard */
+
+    function rows() {
+      return Array.from(menu.querySelectorAll('button.row')).filter(row => {
+        const flyout = row.closest('.flyout');
+        return !flyout || flyout.closest('li.group').classList.contains('is-open');
+      });
+    }
+
+    function step(dir) {
+      const list = rows();
+      if (!list.length) return;
+      const at = list.indexOf(document.activeElement);
+      const next = at === -1 ? (dir > 0 ? 0 : list.length - 1) : (at + dir + list.length) % list.length;
+      list[next].focus();
+    }
+
+    root.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const openGroup = document.activeElement.closest?.('li.group.is-open');
+        if (openGroup && document.activeElement.closest('.flyout')) {
+          closeGroup(openGroup);
+          openGroup.querySelector('.row').focus();
+        } else {
+          close(true);
+        }
+        e.preventDefault();
+        return;
+      }
+
+      if (!showing) {
+        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+          open(false);
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowDown') { step(1); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { step(-1); e.preventDefault(); }
+      else if (e.key === 'ArrowRight') {
+        const li = document.activeElement.closest?.('li.group');
+        if (li && !li.classList.contains('is-open')) toggleGroup(li);
+        const first = li && li.querySelector('.flyout .row');
+        if (first) { first.focus(); e.preventDefault(); }
+      }
+      else if (e.key === 'ArrowLeft') {
+        const li = document.activeElement.closest?.('li.group.is-open');
+        if (li) { closeGroup(li); li.querySelector('.row').focus(); e.preventDefault(); }
+      }
+    });
+
+    menu.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const row = document.activeElement;
+        if (row.classList?.contains('row')) { row.click(); e.preventDefault(); }
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      menu.querySelectorAll('li.group.is-open').forEach(placeFlyout);
+    });
+
+    renderMenu('');
+
+    return {
+      root,
+      bar,
+      field: search,
+      open,
+      close,
+      clear,
+      takeFirst() { const first = rows()[0]; if (first) first.click(); },
+      get selected() { return selectedId ? PRODUCTS.find(p => p.product_id === selectedId) : null; }
+    };
+  }
+
+  function round2(n) { return Math.round(n * 100) / 100; }
+</script>
+
+
+<script>
+  const lines = document.getElementById('lines');
+  const out = document.getElementById('out');
+
+  const BOX = PALLET.box;                      // 20 x 11 x 9 in (L x W x H)
+  const PER_BOX = PALLET.drives_per_box;       // drives per carton
+  const PER_LAYER = PALLET.boxes_per_layer;    // cartons per layer
+  const ALONG_LENGTH = PALLET.cols;            // cartons across the 40" side
+  const ALONG_WIDTH = PALLET.rows;             // cartons across the 44" side
+
+  const SEND_UNIT = UNIT === 'lb' ? 'lbs' : UNIT;
+
+  const entries = [];
+  let sendControl = null;
+
+  if (!CATALOG.length) {
+    document.getElementById('lead').remove();
+    document.getElementById('composer').remove();
+    out.innerHTML = '<p class="empty">No drive data loaded. Check that hdd.json sits next to app.py and contains valid JSON, then reload.</p>';
+  } else {
+    addLine();
+
+    const bar = document.getElementById('formBar');
+    bar.appendChild(iconButton('Add another product', ICON_PLUS, e => {
+      e.stopPropagation();            // keep the new row's list from closing again
+      const entry = addLine();
+      entry.picker.open(true);
+    }, 'icon-btn icon-btn--round tip--left'));
+    bar.appendChild(el('span', 'spacer'));
+    bar.appendChild(iconButton('Start Over', ICON_CROSS, startOver, 'icon-btn icon-btn--quiet'));
+    sendControl = iconButton('Calculate Pallet', ICON_ARROW, calculate, 'icon-btn icon-btn--send');
+    bar.appendChild(sendControl);
+  }
+
+  /* ---------- rows ---------- */
+
+  function addLine() {
+    const line = el('div', 'line');
+
+    const number = el('span', 'line__n');
+    line.appendChild(number);
+
+    const pick = el('div', 'line__pick');
+    const picker = createPicker({
+      variant: 'compact',
+      placeholder: 'Choose a product',
+      searchPlaceholder: 'Filter by Capacity, Product ID, or SKU',
+      label: p => p.capacity + ' TB · ' + p.product_id,
+      onSelect: () => { line.classList.remove('is-bad'); qty.focus(); }
+    });
+    pick.appendChild(picker.root);
+    line.appendChild(pick);
+
+    const qtyWrap = el('div', 'line__qty');
+    const qty = el('input', 'qty');
+    qty.type = 'number';
+    qty.min = String(PER_BOX);
+    qty.step = String(PER_BOX);
+    qty.placeholder = 'HDD Units';
+    qty.setAttribute('aria-label', 'HDD units ordered');
+    qty.addEventListener('input', () => line.classList.remove('is-bad'));
+    qty.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+    qtyWrap.appendChild(qty);
+    line.appendChild(qtyWrap);
+
+    const remove = el('button', 'line__rm', '×');
+    remove.type = 'button';
+    remove.title = 'Remove this row';
+    remove.setAttribute('aria-label', 'Remove this row');
+    remove.addEventListener('click', () => {
+      const at = entries.findIndex(entry => entry.line === line);
+      if (at > -1) entries.splice(at, 1);
+      line.remove();
+      renumber();
+    });
+    line.appendChild(remove);
+
+    lines.appendChild(line);
+
+    const entry = { line, picker, qty, number, remove };
+    entries.push(entry);
+    renumber();
+    return entry;
+  }
+
+  function renumber() {
+    entries.forEach((entry, i) => {
+      entry.number.textContent = i + 1;
+      entry.remove.hidden = entries.length === 1;
+    });
+  }
+
+  function startOver() {
+    entries.splice(0, entries.length);
+    lines.innerHTML = '';
+    out.innerHTML = '';
+    addLine();
+  }
+
+  /* ---------- the pallet itself ---------- */
+
+  /* A part-filled layer, in the order cartons go down:
+       1  one carton, centred on the pallet                          20 x 11
+       2  beside it, long (20 in) sides together                     20 x 22
+       3  turned crosswise beside those two, centred on their seam   31 x 22
+       4  pairs square it up                                         40 x 22
+       5  one across the middle of the two columns                   40 x 33
+       6  pairs again                                                40 x 33
+       7  one across the middle, taking the last row                 40 x 44
+       8  full layer                                                 40 x 44
+     A lone odd carton lies across the seam between the two columns, so it
+     claims a whole 11 in row rather than half of one. */
+  function layerFootprint(cartons) {
+    if (cartons >= PER_LAYER) {
+      return {
+        length: BOX.length * ALONG_LENGTH,
+        width: BOX.width * ALONG_WIDTH,
+        layout: ALONG_LENGTH + ' × ' + ALONG_WIDTH + ' cartons, full layer'
+      };
+    }
+    if (cartons === 1) {
+      return { length: BOX.length, width: BOX.width, layout: '1 carton' };
+    }
+    if (cartons === 2) {
+      return { length: BOX.length, width: BOX.width * 2, layout: '2 cartons, long sides together' };
+    }
+    if (cartons === 3) {
+      // the third carton turns 90° and sits alongside, adding its width to the length
+      return {
+        length: BOX.length + BOX.width,
+        width: BOX.width * 2,
+        layout: '2 cartons plus 1 turned crosswise beside them'
+      };
+    }
+    const rows = Math.ceil(cartons / ALONG_LENGTH);
+    const paired = cartons % 2 === 0;
+    return {
+      length: BOX.length * ALONG_LENGTH,
+      width: BOX.width * rows,
+      layout: ALONG_LENGTH + ' × ' + (paired ? rows : rows - 1) + ' cartons'
+        + (paired ? '' : ' plus 1 across the middle')
+    };
+  }
+
+  function buildPallet(order) {
+    const rows = order.map(item => {
+      const cartons = item.drives / PER_BOX;   // validated as a whole number
+      return {
+        product: item.product,
+        drives: item.drives,
+        cartons: cartons,
+        weight: round2(cartons * item.product.weight)
+      };
+    });
+
+    const cartons = rows.reduce((sum, r) => sum + r.cartons, 0);
+    const drives = rows.reduce((sum, r) => sum + r.drives, 0);
+    const weight = round2(rows.reduce((sum, r) => sum + r.weight, 0));
+
+    const layers = Math.ceil(cartons / PER_LAYER);
+    const height = layers * BOX.height;
+
+    // a full bottom layer sets the footprint; extra layers stack on top of it
+    const footprint = layerFootprint(cartons);
+
+    return {
+      rows: rows,
+      footprint: footprint,
+      cartons: cartons,
+      drives: drives,
+      weight: weight,
+      layers: layers,
+      topLayer: cartons % PER_LAYER || PER_LAYER,
+      length: footprint.length,
+      width: footprint.width,
+      height: height,
+      full: cartons >= PER_LAYER
+    };
+  }
+
+
+  /* ---------- pallet view ----------
+     A small orthographic renderer: every carton and pallet board is an
+     axis-aligned box, so each one projects to at most three visible faces.
+     Faces from the whole scene are sorted back to front and drawn as SVG
+     polygons, which keeps this dependency-free and works offline.
+
+     x runs along the 40 in side, y along the 44 in side, z up. */
+
+  const DECK_HEIGHT = 5.5;              // the pallet itself, not part of the quote
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  const CARTON_FILL = [190, 157, 124];        // #be9d7c
+  const CARTON_EDGE = '#7c6349';
+  const WOOD_FILL = [0, 94, 166];             // #005ea6, the usual plastic-pallet blue
+  const WOOD_EDGE = '#00406f';
+  const FACE_LIGHT = { top: 1, x: 0.82, y: 0.63 };
+
+  /* Packaging labels, drawn once into <defs> and stamped onto a carton face with
+     an affine transform. Orthographic projection maps a rectangle to a
+     parallelogram, so one <use> per label is enough — no need to re-draw every
+     barcode on every frame. Artwork space is 100 wide by 141 tall. */
+  const ART_W = 100, ART_H = 141;
+
+  function barcode(x, y, w, h, seed, modules) {
+    let state = seed, out = '';
+    const next = () => { state = (state * 1103515245 + 12345) % 2147483648; return state / 2147483648; };
+    const unit = w / (modules || 46);
+    let at = x;
+    while (at < x + w) {
+      const bar = unit * (1 + Math.floor(next() * 3));
+      const gap = unit * (1 + Math.floor(next() * 2));
+      if (at + bar > x + w) break;
+      out += '<rect x="' + at.toFixed(2) + '" y="' + y + '" width="' + bar.toFixed(2)
+           + '" height="' + h + '"/>';
+      at += bar + gap;
+    }
+    return out;
+  }
+
+  /* Blocks standing in for words. Real text is unreadable at the size a label
+     ends up on screen, and these cost a handful of rects a line. */
+  function words(x, y, w, h, seed) {
+    let state = seed, out = '';
+    const next = () => { state = (state * 1103515245 + 12345) % 2147483648; return state / 2147483648; };
+    let at = x;
+    while (at < x + w - 3) {
+      const word = Math.min(5 + next() * 13, x + w - at);
+      out += '<rect x="' + at.toFixed(1) + '" y="' + y + '" width="' + word.toFixed(1)
+           + '" height="' + h + '" rx="' + (h / 3).toFixed(2) + '"/>';
+      at += word + 2.6;
+    }
+    return out;
+  }
+
+  function manufacturerLabel() {
+    let art = '<path d="M0 6 A6 6 0 0 1 6 0 H94 A6 6 0 0 1 100 6 V135 A6 6 0 0 1 94 141'
+            + ' H6 A6 6 0 0 1 0 135 Z" fill="#ffffff" stroke="#b9b1a4" stroke-width="1.2"/>';
+
+    // two large barcodes across the top
+    art += '<g fill="#1b1b20">' + barcode(7, 7, 86, 23, 17, 44) + barcode(7, 34, 86, 23, 91, 44) + '</g>';
+    art += '<rect x="7" y="60" width="86" height="1" fill="#cdc6ba"/>';
+
+    // twenty smaller ones, ten to a column
+    art += '<g fill="#26262c">';
+    for (let row = 0; row < 10; row++) {
+      const y = 65 + row * 7.4;
+      art += barcode(7, y, 40, 5, 31 + row * 7, 24);
+      art += barcode(53, y, 40, 5, 211 + row * 13, 24);
+    }
+    art += '</g>';
+
+    return art;
+  }
+
+  function shippingLabel() {
+    let art = '<path d="M0 6 A6 6 0 0 1 6 0 H94 A6 6 0 0 1 100 6 V135 A6 6 0 0 1 94 141'
+            + ' H6 A6 6 0 0 1 0 135 Z" fill="#ffffff" stroke="#b9b1a4" stroke-width="1.2"/>';
+
+    // sender on the left, recipient on the right, split by a rule
+    art += '<rect x="46" y="4" width="0.8" height="24" fill="#2b2b33"/>';
+    art += '<g fill="#6f6f79">' + words(5, 5, 12, 2.2, 3) + words(51, 5, 9, 2.2, 5) + '</g>';
+    art += '<g fill="#8b8b95">';
+    for (let line = 0; line < 4; line++) art += words(5, 9.5 + line * 4.3, 39, 2.4, 11 + line * 3);
+    art += '</g>';
+    art += '<g fill="#2f2f37">';
+    for (let line = 0; line < 4; line++) art += words(51, 9.5 + line * 4.3, 44, 2.8, 23 + line * 5);
+    art += '</g>';
+    art += '<rect x="0" y="29" width="100" height="1.6" fill="#1b1b20"/>';
+
+    // reference line, barcode, and the carrier mark with its service square
+    art += '<g fill="#3a3a43">' + words(5, 33, 44, 2.4, 41) + '</g>';
+    art += '<g fill="#1b1b20">' + barcode(5, 38, 60, 21, 57, 40) + '</g>';
+    art += '<g fill="#2b2b33">' + words(70, 32, 17, 4, 61) + '</g>';
+    art += '<rect x="88" y="32" width="7" height="4" rx="1" fill="#f2751f"/>';
+    art += '<g fill="#8b8b95">' + words(70, 38, 14, 2, 67) + '</g>';
+    art += '<rect x="72" y="42" width="22" height="20" rx="1" fill="#ffffff" stroke="#1b1b20" stroke-width="1.4"/>';
+    art += '<rect x="77" y="46" width="12" height="12" rx="1" fill="#1b1b20"/>';
+    art += '<rect x="96.5" y="40" width="1.6" height="22" fill="#c2bcb2"/>';
+    art += '<rect x="0" y="63.5" width="100" height="1.6" fill="#1b1b20"/>';
+
+    // tracking line
+    art += '<g fill="#22222a">' + words(22, 67, 56, 3.4, 71) + '</g>';
+    art += '<g fill="#9a9aa4">' + words(18, 72.5, 64, 1.8, 73) + '</g>';
+    art += '<rect x="0" y="77" width="100" height="0.9" fill="#c2bcb2"/>';
+
+    // delivery block, with the service panel boxed off on the right
+    art += '<g fill="#8b8b95">' + words(5, 80, 40, 1.8, 79) + '</g>';
+    art += '<g fill="#22222a">' + words(5, 84.5, 30, 3, 83) + '</g>';
+    art += '<g fill="#2f2f37">';
+    for (let line = 0; line < 3; line++) art += words(9, 90 + line * 4.4, 48, 2.6, 89 + line * 7);
+    art += '</g>';
+    art += '<rect x="63" y="80" width="32" height="23" rx="1.5" fill="#ffffff" stroke="#1b1b20" stroke-width="1"/>';
+    art += '<g fill="#4a4a54">';
+    for (let line = 0; line < 4; line++) art += words(67, 83.5 + line * 4.6, 24, 2.2, 97 + line * 11);
+    art += '</g>';
+
+    art += '<rect x="0" y="105" width="100" height="1.6" fill="#1b1b20"/>';
+    art += '<g fill="#22222a">' + words(24, 108.5, 52, 3.2, 113) + '</g>';
+
+    // the big one at the foot, with a digit strip under it
+    art += '<g fill="#1b1b20">' + barcode(5, 114, 90, 20, 127, 48) + '</g>';
+    art += '<g fill="#22222a">' + words(14, 136, 72, 2.8, 131) + '</g>';
+
+    return art;
+  }
+
+  /* Stand-ins for when a label lands on screen too small for any of that to
+     read — a handful of rects instead of a few hundred. */
+  function faintLabel(dark) {
+    let art = '<rect x="0" y="0" width="100" height="141" rx="6" fill="#ffffff" stroke="#b9b1a4" stroke-width="1.4"/>';
+    art += '<rect x="8" y="10" width="84" height="' + (dark ? 26 : 46) + '" fill="#55555f"/>';
+    art += '<rect x="8" y="' + (dark ? 42 : 64) + '" width="84" height="' + (dark ? 34 : 30) + '" fill="#9a9aa4"/>';
+    art += '<rect x="8" y="' + (dark ? 82 : 100) + '" width="84" height="30" fill="#55555f"/>';
+    return art;
+  }
+
+  /* Where each carton sits in a layer, in a 40 x 44 frame, centred once built. */
+  function layerBoxes(count) {
+    const L = BOX.length, W = BOX.width;
+    let boxes;
+
+    if (count >= PER_LAYER) {
+      boxes = [];
+      for (let col = 0; col < ALONG_LENGTH; col++) {
+        for (let row = 0; row < ALONG_WIDTH; row++) {
+          boxes.push({ x: col * L, y: row * W, l: L, w: W });
+        }
+      }
+    } else if (count === 1) {
+      // turned across the seam between the two columns
+      boxes = [{ x: 0, y: 0, l: W, w: L }];
+    } else if (count === 2) {
+      // long sides together, the seam on the column line
+      boxes = [{ x: 0, y: 0, l: W, w: L }, { x: W, y: 0, l: W, w: L }];
+    } else if (count === 3) {
+      // those two, plus one perpendicular below, centred on where they meet
+      boxes = [
+        { x: 0, y: 0, l: W, w: L },
+        { x: W, y: 0, l: W, w: L },
+        { x: W - L / 2, y: L, l: L, w: W }
+      ];
+    } else {
+      // 2 x 2 or 2 x 3 facing the same way as the layers below, and an odd
+      // carton centred on the column seam of the row beneath it
+      const rows = Math.floor(count / 2);
+      boxes = [];
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < ALONG_LENGTH; col++) {
+          boxes.push({ x: col * L, y: row * W, l: L, w: W });
+        }
+      }
+      if (count % 2) boxes.push({ x: L - L / 2, y: rows * W, l: L, w: W });
+    }
+
+    // centre the arrangement on the pallet
+    const minX = Math.min(...boxes.map(b => b.x));
+    const maxX = Math.max(...boxes.map(b => b.x + b.l));
+    const minY = Math.min(...boxes.map(b => b.y));
+    const maxY = Math.max(...boxes.map(b => b.y + b.w));
+    const dx = (BOX.length * ALONG_LENGTH - (maxX - minX)) / 2 - minX;
+    const dy = (BOX.width * ALONG_WIDTH - (maxY - minY)) / 2 - minY;
+
+    return boxes.map(b => ({ x: b.x + dx, y: b.y + dy, l: b.l, w: b.w }));
+  }
+
+  function palletBoards() {
+    const L = BOX.length * ALONG_LENGTH, W = BOX.width * ALONG_WIDTH;
+    const boards = [];
+
+    // bottom boards
+    [0, W / 2 - 2.5, W - 5].forEach(y => {
+      boards.push({ x: 0, y: y, z: 0, l: L, w: 5, h: 1.5, wood: true });
+    });
+    // stringers
+    [0, L / 2 - 1.75, L - 3.5].forEach(x => {
+      boards.push({ x: x, y: 0, z: 1.5, l: 3.5, w: W, h: 2.5, wood: true });
+    });
+    // top deck
+    boards.push({ x: 0, y: 0, z: 4, l: L, w: W, h: 1.5, wood: true });
+
+    return boards;
+  }
+
+  function buildScene(cartons) {
+    const prisms = palletBoards();
+    const fullLayers = Math.floor(cartons / PER_LAYER);
+    const rest = cartons % PER_LAYER;
+
+    let z = DECK_HEIGHT;
+    for (let layer = 0; layer < fullLayers; layer++) {
+      layerBoxes(PER_LAYER).forEach(b => {
+        prisms.push({ x: b.x, y: b.y, z: z, l: b.l, w: b.w, h: BOX.height });
+      });
+      z += BOX.height;
+    }
+    if (rest) {
+      layerBoxes(rest).forEach(b => {
+        prisms.push({ x: b.x, y: b.y, z: z, l: b.l, w: b.w, h: BOX.height });
+      });
+      z += BOX.height;
+    }
+
+    return { prisms: prisms, top: z };
+  }
+
+  function faceColor(rgb, light) {
+    return 'rgb(' + rgb.map(c => Math.round(c * light)).join(',') + ')';
+  }
+
+  function makePalletView() {
+    const stage = el('figure', 'stage');
+    stage.style.margin = '0';
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    const VIEW_W = 400, VIEW_H = 340;
+    svg.setAttribute('viewBox', '0 0 ' + VIEW_W + ' ' + VIEW_H);
+    svg.setAttribute('role', 'img');
+
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    defs.innerHTML =
+      '<g id="mfgLabel">' + manufacturerLabel() + '</g>' +
+      '<g id="shipLabel">' + shippingLabel() + '</g>' +
+      '<g id="mfgLabelFaint">' + faintLabel(false) + '</g>' +
+      '<g id="shipLabelFaint">' + faintLabel(true) + '</g>';
+    svg.appendChild(defs);
+
+    const canvas = document.createElementNS(SVG_NS, 'g');
+    svg.appendChild(canvas);
+
+    stage.appendChild(svg);
+
+    const caption = el('figcaption');
+    caption.appendChild(el('span', null, 'Drag to turn'));
+    const readout = el('span', 'stage__dims');
+    caption.appendChild(readout);
+    stage.appendChild(caption);
+
+    const HOME = { az: -0.72, el: 0.46 };
+    let az = HOME.az, tilt = HOME.el;
+    let scene = buildScene(PER_LAYER);
+
+    function project(px, py, pz, centre) {
+      const ca = Math.cos(az), sa = Math.sin(az);
+      const ce = Math.cos(tilt), se = Math.sin(tilt);
+      const x = px - centre[0], y = py - centre[1], z = pz - centre[2];
+      return {
+        x: x * -sa + y * ca,
+        y: -(x * -se * ca + y * -se * sa + z * ce),
+        d: x * ce * ca + y * ce * sa + z * se
+      };
+    }
+
+    /* Painter's order. Every pair of boxes here is separated along at least one
+       axis — cartons never overlap in plan, and layers stack — so for any two of
+       them the one behind is decidable. Only pairs that actually share screen
+       space get to constrain each other: ordering boxes that never overlap
+       invents constraints, those can close a loop, and the boxes caught in the
+       loop end up painted last, which looks like the pallet showing through the
+       load. */
+
+    const CORNERS = [
+      [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
+      [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]
+    ];
+
+    const FACES = [
+      { corners: [4, 5, 6, 7], normal: [0, 0, 1], light: FACE_LIGHT.top },
+      { corners: [1, 2, 6, 5], normal: [1, 0, 0], light: FACE_LIGHT.x },
+      { corners: [0, 3, 7, 4], normal: [-1, 0, 0], light: FACE_LIGHT.x },
+      { corners: [3, 2, 6, 7], normal: [0, 1, 0], light: FACE_LIGHT.y },
+      { corners: [0, 1, 5, 4], normal: [0, -1, 0], light: FACE_LIGHT.y }
+    ];
+
+    const AXES = [['x', 'l', 0], ['y', 'w', 1], ['z', 'h', 2]];
+
+    function whichIsBehind(a, b, toward) {
+      // Check every axis that separates the pair, not just the first one. If two
+      // of them disagree about who is in front, that disagreement is the proof
+      // that no line of sight passes through both boxes — they cannot overlap on
+      // screen, so neither constrains the other. Taking the first answer instead
+      // asserts an order that isn't real, and enough of those close a loop.
+      let verdict = 0;
+
+      for (let k = 0; k < AXES.length; k++) {
+        const pos = AXES[k][0], size = AXES[k][1], axis = AXES[k][2];
+        if (Math.abs(toward[axis]) < 1e-9) continue;   // that axis lies flat across the screen
+
+        let vote = 0;
+        if (a[pos] + a[size] <= b[pos] + 1e-6) vote = toward[axis] > 0 ? -1 : 1;
+        else if (b[pos] + b[size] <= a[pos] + 1e-6) vote = toward[axis] > 0 ? 1 : -1;
+        if (!vote) continue;
+
+        if (verdict && verdict !== vote) return 0;
+        verdict = vote;
+      }
+
+      return verdict;
+    }
+
+    /* Which face of a carton carries its labels: the end face, the one at right
+       angles to the carton's 20 in length, on whichever side points away from the
+       middle of the pallet. That puts them outward for both columns of a 2 x 4
+       layer and for cartons turned across it. */
+    function labelFace(prism, middle) {
+      const alongX = prism.l >= prism.w;
+      const top = prism.z + prism.h;
+
+      if (alongX) {
+        const outward = (prism.x + prism.l / 2) >= middle[0] ? 1 : -1;
+        return outward > 0
+          ? { normal: [1, 0, 0], origin: [prism.x + prism.l, prism.y, top],
+              across: [0, 1, 0], down: [0, 0, -1], width: prism.w, height: prism.h }
+          : { normal: [-1, 0, 0], origin: [prism.x, prism.y + prism.w, top],
+              across: [0, -1, 0], down: [0, 0, -1], width: prism.w, height: prism.h };
+      }
+
+      const outward = (prism.y + prism.w / 2) >= middle[1] ? 1 : -1;
+      return outward > 0
+        ? { normal: [0, 1, 0], origin: [prism.x + prism.l, prism.y + prism.w, top],
+            across: [-1, 0, 0], down: [0, 0, -1], width: prism.l, height: prism.h }
+        : { normal: [0, -1, 0], origin: [prism.x, prism.y, top],
+            across: [1, 0, 0], down: [0, 0, -1], width: prism.l, height: prism.h };
+    }
+
+    function draw() {
+      while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
+
+      const L = BOX.length * ALONG_LENGTH, W = BOX.width * ALONG_WIDTH;
+      const centre = [L / 2, W / 2, scene.top / 2];
+
+      // a scale that holds still while the pallet turns: the widest the scene
+      // can ever project is its horizontal diagonal
+      const spread = Math.sqrt(L * L + W * W);
+      const scale = Math.min(
+        VIEW_W / spread,
+        VIEW_H / Math.sqrt(spread * spread + scene.top * scene.top)
+      ) * 0.92;
+
+      const ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(tilt), se = Math.sin(tilt);
+      const toward = [ce * ca, ce * sa, se];
+
+      const toScreen = point => {
+        const p = project(point[0], point[1], point[2], centre);
+        return { x: VIEW_W / 2 + p.x * scale, y: VIEW_H / 2 + p.y * scale };
+      };
+      const ctx = { toward: toward, toScreen: toScreen, middle: [L / 2, W / 2] };
+
+      const solids = scene.prisms.map(prism => {
+        const points = CORNERS.map(corner => {
+          const p = project(
+            prism.x + corner[0] * prism.l,
+            prism.y + corner[1] * prism.w,
+            prism.z + corner[2] * prism.h,
+            centre
+          );
+          return { x: VIEW_W / 2 + p.x * scale, y: VIEW_H / 2 + p.y * scale, d: p.d };
+        });
+
+        const xs = points.map(p => p.x), ys = points.map(p => p.y);
+        return {
+          prism: prism,
+          points: points,
+          minX: Math.min.apply(null, xs), maxX: Math.max.apply(null, xs),
+          minY: Math.min.apply(null, ys), maxY: Math.max.apply(null, ys),
+          depth: points.reduce((sum, p) => sum + p.d, 0) / points.length
+        };
+      });
+
+      const after = solids.map(() => []);
+      const waiting = new Array(solids.length).fill(0);
+
+      for (let i = 0; i < solids.length; i++) {
+        for (let j = i + 1; j < solids.length; j++) {
+          const a = solids[i], b = solids[j];
+          if (a.maxX <= b.minX || b.maxX <= a.minX) continue;   // no shared screen space
+          if (a.maxY <= b.minY || b.maxY <= a.minY) continue;
+
+          const rel = whichIsBehind(a.prism, b.prism, toward);
+          if (rel < 0) { after[i].push(j); waiting[j]++; }
+          else if (rel > 0) { after[j].push(i); waiting[i]++; }
+        }
+      }
+
+      const left = new Set(solids.map((_, i) => i));
+      const frag = document.createDocumentFragment();
+
+      while (left.size) {
+        // the furthest box with nothing left behind it
+        let pick = -1;
+        left.forEach(i => {
+          if (waiting[i] !== 0) return;
+          if (pick === -1 || solids[i].depth < solids[pick].depth) pick = i;
+        });
+        // nothing is free only if constraints looped; take the furthest and move on
+        if (pick === -1) {
+          left.forEach(i => { if (pick === -1 || solids[i].depth < solids[pick].depth) pick = i; });
+        }
+
+        left.delete(pick);
+        after[pick].forEach(next => { waiting[next]--; });
+        paint(solids[pick], ctx, frag);
+      }
+
+      canvas.appendChild(frag);
+    }
+
+    function paint(solid, ctx, frag) {
+      const base = solid.prism.wood ? WOOD_FILL : CARTON_FILL;
+      const toward = ctx.toward;
+
+      // the faces of one box never overlap each other, so no sorting within
+      FACES.forEach(face => {
+        const facing = face.normal[0] * toward[0]
+                     + face.normal[1] * toward[1]
+                     + face.normal[2] * toward[2];
+        if (facing <= 0.0001) return;
+
+        const points = face.corners
+          .map(i => solid.points[i].x.toFixed(2) + ',' + solid.points[i].y.toFixed(2))
+          .join(' ');
+
+        const poly = document.createElementNS(SVG_NS, 'polygon');
+        poly.setAttribute('points', points);
+        poly.setAttribute('fill', faceColor(base, face.light));
+        poly.setAttribute('stroke', solid.prism.wood ? WOOD_EDGE : CARTON_EDGE);
+        poly.setAttribute('stroke-width', '0.7');
+        poly.setAttribute('stroke-linejoin', 'round');
+        frag.appendChild(poly);
+      });
+
+      if (solid.prism.wood) return;
+      stickLabels(solid.prism, ctx, frag);
+    }
+
+    function stickLabels(prism, ctx, frag) {
+      const face = labelFace(prism, ctx.middle);
+      const facing = face.normal[0] * ctx.toward[0]
+                   + face.normal[1] * ctx.toward[1]
+                   + face.normal[2] * ctx.toward[2];
+      if (facing <= 0.0001) return;
+
+      const corner = ctx.toScreen(face.origin);
+      const perAcross = ctx.toScreen([
+        face.origin[0] + face.across[0], face.origin[1] + face.across[1], face.origin[2] + face.across[2]
+      ]);
+      const perDown = ctx.toScreen([
+        face.origin[0] + face.down[0], face.origin[1] + face.down[1], face.origin[2] + face.down[2]
+      ]);
+
+      // screen movement per inch along the face's two edges
+      const ax = perAcross.x - corner.x, ay = perAcross.y - corner.y;
+      const dx = perDown.x - corner.x, dy = perDown.y - corner.y;
+
+      const labelW = face.width * 0.4;              // two labels, left half and right
+      const labelH = face.height * 0.69;
+      const top = (face.height - labelH) / 2;
+      const kx = labelW / ART_W, ky = labelH / ART_H;
+
+      // how wide the label actually lands on screen decides how much to draw
+      const onScreen = Math.sqrt(ax * ax + ay * ay) * labelW;
+      if (onScreen < 3.5) return;                   // below this it is one pale smudge
+      const suffix = onScreen < 15 ? 'Faint' : '';
+
+      [['mfgLabel' + suffix, face.width * 0.05], ['shipLabel' + suffix, face.width * 0.55]].forEach(slot => {
+        const left = slot[1];
+        const ox = corner.x + ax * left + dx * top;
+        const oy = corner.y + ay * left + dy * top;
+
+        const use = document.createElementNS(SVG_NS, 'use');
+        use.setAttribute('href', '#' + slot[0]);
+        use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + slot[0]);
+        use.setAttribute('transform', 'matrix('
+          + (ax * kx).toFixed(4) + ',' + (ay * kx).toFixed(4) + ','
+          + (dx * ky).toFixed(4) + ',' + (dy * ky).toFixed(4) + ','
+          + ox.toFixed(2) + ',' + oy.toFixed(2) + ')');
+        frag.appendChild(use);
+      });
+    }
+
+    /* drag to turn */
+    let from = null;
+    svg.addEventListener('pointerdown', e => {
+      from = { x: e.clientX, y: e.clientY };
+      svg.classList.add('is-turning');
+      svg.setPointerCapture(e.pointerId);
+    });
+    svg.addEventListener('pointermove', e => {
+      if (!from) return;
+      az -= (e.clientX - from.x) * 0.011;
+      tilt = Math.min(1.45, Math.max(0.08, tilt + (e.clientY - from.y) * 0.008));
+      from = { x: e.clientX, y: e.clientY };
+      draw();
+    });
+    ['pointerup', 'pointercancel'].forEach(type => {
+      svg.addEventListener(type, () => { from = null; svg.classList.remove('is-turning'); });
+    });
+    svg.addEventListener('dblclick', () => { az = HOME.az; tilt = HOME.el; draw(); });
+
+    return {
+      stage: stage,
+      show(pallet) {
+        scene = buildScene(pallet.cartons);
+        svg.setAttribute('aria-label',
+          pallet.cartons + ' cartons on a pallet, '
+          + pallet.length + ' by ' + pallet.width + ' by ' + pallet.height + ' inches');
+        readout.textContent = 'DIM: ' + pallet.length + ' × ' + pallet.width + ' × '
+          + pallet.height + ' in · Weight: ' + pallet.weight + ' ' + SEND_UNIT;
+        draw();
+      }
+    };
+  }
+
+  /* ---------- calculate ---------- */
+
+
+  function calculate() {
+    const order = [];
+    const problems = [];
+    let bad = 0;
+
+    entries.forEach((entry, i) => {
+      entry.line.classList.remove('is-bad');
+      const product = entry.picker.selected;
+      const raw = entry.qty.value.trim();
+      const drives = Number(raw);
+
+      if (!product && !raw) return;   // an untouched row is fine, just skip it
+
+      if (!product) {
+        problems.push('Row ' + (i + 1) + ' needs a product.');
+        entry.line.classList.add('is-bad');
+        bad++;
+        return;
+      }
+      if (!raw || !Number.isFinite(drives) || drives < 1 || !Number.isInteger(drives)) {
+        problems.push('Row ' + (i + 1) + ' needs a whole number of drives, 1 or more.');
+        entry.line.classList.add('is-bad');
+        bad++;
+        return;
+      }
+      if (drives % PER_BOX !== 0) {
+        const under = Math.floor(drives / PER_BOX) * PER_BOX;
+        const over = under + PER_BOX;
+        problems.push('Row ' + (i + 1) + ': ' + drives + ' drives does not fill whole cartons. '
+          + 'A carton holds ' + PER_BOX + ', so try '
+          + (under >= PER_BOX ? under + ' or ' : '') + over + '.');
+        entry.line.classList.add('is-bad');
+        bad++;
+        return;
+      }
+
+      order.push({ product: product, drives: drives });
+    });
+
+    if (bad) return showProblems(problems);
+    if (!order.length) return showProblems(['Pick a product and enter how many drives were ordered.']);
+
+    renderPallet(buildPallet(order));
+    if (sendControl) flashSent(sendControl);
+  }
+
+  function showProblems(list) {
+    out.innerHTML = '';
+    const box = el('div', 'problem');
+    list.forEach(text => box.appendChild(el('div', null, text)));
+    out.appendChild(box);
+  }
+
+  /* ---------- output ---------- */
+
+  const ICON_BOX = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">'
+    + '<path d="M10 2.6 17 6v8l-7 3.4L3 14V6l7-3.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+    + '<path d="M3 6l7 3.4L17 6M10 9.4v8" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  const ICON_SCALE = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">'
+    + '<path d="M7.6 6.2a2.4 2.4 0 1 1 4.8 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+    + '<path d="M6.6 6.2h6.8l2.1 10.2a1 1 0 0 1-1 1.2H5.5a1 1 0 0 1-1-1.2L6.6 6.2Z"'
+    + ' stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+
+  function statCard(icon, tone, label, value, unit, copyLabel, copyValue) {
+    const card = el('div', 'stat');
+
+    const badge = el('span', 'stat__icon' + (tone ? ' stat__icon--' + tone : ''));
+    badge.innerHTML = icon;
+    card.appendChild(badge);
+
+    const body = el('div', 'stat__body');
+    body.appendChild(el('div', 'stat__label', label));
+    const figure = el('div', 'stat__value');
+    figure.appendChild(el('span', null, value));
+    if (unit) figure.appendChild(el('small', null, unit));
+    body.appendChild(figure);
+    card.appendChild(body);
+
+    if (copyLabel) card.appendChild(copyButton(copyLabel, copyValue));
+    return card;
+  }
+
+  function cell(tag, text, cls) {
+    const node = el(tag, cls, text);
+    return node;
+  }
+
+  /* The message for logistics. Dot leaders pad every label out to the same
+     character column so the values line up in plain Google Chat text. */
+  const LEADER_COLUMN = 48;
+
+  function leaderLine(label, value) {
+    let line = label + ' ';
+    while (line.length + 3 <= LEADER_COLUMN) line += '.  ';   // whole dots only
+    return line.padEnd(LEADER_COLUMN, ' ') + value;
+  }
+
+  function sendText(pallet) {
+    const dims = pallet.length + ' x ' + pallet.width + ' x ' + pallet.height + ' in';
+    return leaderLine('Pallet Dimensions (L x W x H)', dims) + '\n'
+         + leaderLine('Total Weight', pallet.weight + ' ' + SEND_UNIT);
+  }
+
+  function sendButton(text) {
+    const button = el('button', 'send-btn');
+    button.type = 'button';
+    const icon = el('span');
+    icon.innerHTML = ICON_COPY;
+    const words = el('span', null, 'Copy Dimensions & Weight');
+    button.append(icon, words);
+
+    button.addEventListener('click', async () => {
+      const ok = await writeClipboard(text);
+      icon.innerHTML = ok ? ICON_DONE : ICON_COPY;
+      words.textContent = ok ? 'Copied' : 'Copy failed — select it by hand';
+      button.classList.toggle('is-done', ok);
+      clearTimeout(button._revert);
+      button._revert = setTimeout(() => {
+        icon.innerHTML = ICON_COPY;
+        words.textContent = 'Copy Dimensions & Weight';
+        button.classList.remove('is-done');
+      }, 1600);
+    });
+
+    return button;
+  }
+
+  function renderPallet(pallet) {
+    out.innerHTML = '';
+
+    const dims = pallet.length + ' × ' + pallet.width + ' × ' + pallet.height;
+
+    const wire = el('section', 'wire');
+
+    // the message for logistics sits above the figures it carries
+    const send = el('div', 'wire__send');
+    send.appendChild(sendButton(sendText(pallet)));
+    wire.appendChild(send);
+
+    const headline = el('div', 'wire__rows');
+    headline.appendChild(statCard(ICON_BOX, null, 'Pallet Dimensions (L × W × H)', dims, 'in',
+                                  'dimensions', pallet.length + ' x ' + pallet.width + ' x ' + pallet.height));
+    headline.appendChild(statCard(ICON_SCALE, 'amber', 'Total Weight', String(pallet.weight), SEND_UNIT,
+                                  'total weight', String(pallet.weight)));
+    wire.appendChild(headline);
+    out.appendChild(wire);
+
+    const card = el('div', 'card');
+    const specs = el('dl', 'specs');
+    specs.appendChild(pair('Total Cartons', pallet.cartons + ' × (' + BOX.length + ' × ' + BOX.width + ' × ' + BOX.height + ' in)'));
+    specs.appendChild(pair('HDD Units', String(pallet.drives)));
+    card.appendChild(specs);
+
+    /* per-product breakdown */
+    const table = el('table', 'breakdown');
+    const thead = el('thead');
+    const hrow = el('tr');
+    ['Product ID', 'HDD Units', 'Cartons', 'Weight per Carton (' + UNIT + ')', 'Total Weight (' + SEND_UNIT + ')']
+      .forEach(h => hrow.appendChild(cell('th', h)));
+    thead.appendChild(hrow);
+    table.appendChild(thead);
+
+    const tbody = el('tbody');
+    pallet.rows.forEach(row => {
+      const tr = el('tr');
+      tr.appendChild(cell('td', row.product.product_id, 'id'));
+      tr.appendChild(cell('td', String(row.drives)));
+      tr.appendChild(cell('td', String(row.cartons)));
+      tr.appendChild(cell('td', String(row.product.weight)));
+      tr.appendChild(cell('td', String(row.weight)));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    const tfoot = el('tfoot');
+    const frow = el('tr');
+    frow.appendChild(cell('td', 'Total'));
+    frow.appendChild(cell('td', String(pallet.drives)));
+    frow.appendChild(cell('td', String(pallet.cartons)));
+    frow.appendChild(cell('td', ''));
+    frow.appendChild(cell('td', String(pallet.weight)));
+    tfoot.appendChild(frow);
+    table.appendChild(tfoot);
+    const split = el('div', 'detail-split');
+    const left = el('div', 'pane');
+    left.appendChild(table);
+    split.appendChild(left);
+
+    const view = makePalletView();
+    split.appendChild(view.stage);
+    card.appendChild(split);
+
+    out.appendChild(card);
+    view.show(pallet);
+  }
+
+  function pair(label, value) {
+    const div = el('div');
+    div.appendChild(el('dt', null, label));
+    const val = el('div', 'val');
+    val.appendChild(el('dd', null, value));
+    div.appendChild(val);
+    return div;
+  }
+</script>
+
+</body>
+</html>
