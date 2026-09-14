@@ -7,7 +7,6 @@
                 "item": "1TB",
                 "sku": "WD11PURZ",
                 "capacity": 1,
-                "type": "PURZ",
                 "weight": 22.15
             }
         }]
@@ -16,7 +15,7 @@
         "capacity": 2,
         "has_multiple": false,
         "products": [{
-            "PC-HD-SATA2": {
+            "PC-HD-SATA2T": {
                 "item": "2TB",
                 "sku": "DHWD23PURZ",
                 "capacity": 2,

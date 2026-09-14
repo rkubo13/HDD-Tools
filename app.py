@@ -252,5 +252,5 @@ def healthz():
 
 
 if __name__ == "__main__":
-    # host="0.0.0.0" so other machines on the office network can reach it too.
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5050)), debug=True)
+    # host="0.0.0.0" is set for other devices on local network to be reachable
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5050)), debug=False)

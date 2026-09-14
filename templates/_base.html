@@ -4,31 +4,143 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Hard Drive Weights{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fetched without blocking the first paint: a stylesheet in the head holds the
+     page blank until it answers, and over a LAN — or with no route out to the
+     internet at all — that wait is the second or two before anything shows up.
+     The page draws immediately in the fallback face and swaps when this lands. -->
+<link rel="stylesheet" media="print" onload="this.media='all'; this.onload=null"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<noscript>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Instrument+Sans:wght@400;500;600&display=swap">
+</noscript>
+<script>
+  /* The page's pieces arrive at different times over a slow link — text first,
+     the search bubble only once the script at the foot has run, the logo when
+     its bytes land. Rather than each popping in as it comes, everything holds
+     back and enters together, once the page is built and the logo is in. A
+     cap keeps a slow image from holding the page hostage. Without script the
+     class is never added and nothing is held. */
+  try {
+    var saved = localStorage.getItem('theme');
+    var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+  } catch (e) {}
+  document.documentElement.classList.add('is-loading');
+  (function () {
+    var shown = false;
+    function show() {
+      if (shown) return;
+      shown = true;
+      document.documentElement.classList.remove('is-loading');
+      document.documentElement.classList.add('is-ready');
+    }
+    function whenBuilt() {
+      var logo = document.querySelector('.topbar__logo img');
+      var image = logo && !logo.complete
+        ? new Promise(function (r) { logo.addEventListener('load', r, { once: true }); logo.addEventListener('error', r, { once: true }); })
+        : Promise.resolve();
+      // the face too, so the text is not redrawn halfway through its entrance
+      var face = document.fonts ? document.fonts.ready : Promise.resolve();
+      var cap = new Promise(function (r) { setTimeout(r, 900); });
+      Promise.race([Promise.all([image, face]), cap]).then(function () {
+        // two frames: the first lets the held state actually reach the screen,
+        // so the entrance has something to rise out of instead of snapping in
+        requestAnimationFrame(function () { requestAnimationFrame(show); });
+      });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', whenBuilt);
+    else whenBuilt();
+    setTimeout(show, 4000);
+  })();
+</script>
 <style>
   :root {
-    --brand: #465bf4;
-    --brand-deep: #3244d6;
-    --brand-soft: #eceffe;
-    --brand-line: #d5dbfb;
-    --ink: #1b1d28;
-    --ink-soft: #444a5e;
-    --muted: #6e7386;
-    --page: #f3f4f9;
+    --brand: #6f2dd9;
+    --brand-deep: #5a1fb5;
+    --brand-soft: #f1e9fd;
+    --brand-line: #ddcdf8;
+    --ink: #17121f;
+    --ink-soft: #3d3550;
+    --muted: #6f6885;
+    --page: #f3f1f8;
     --card: #ffffff;
-    --line: #e4e6ef;
-    --line-soft: #eef0f6;
-    --tint: #f4f5fa;
+    --line: #e9e5f2;
+    --line-soft: #f1eef7;
+    --tint: #f5f3fa;
+    --tint-2: #ede9f5;
+    --tint-3: #e3ddf0;
+    --ok-soft: #e2f4ec;
+    --canvas: linear-gradient(152deg, #3b1284 0%, #6a26c9 46%, #a03be0 100%);
     --accent: #ff4900;
     --ok: #00996a;
     --warn: #9a5b00;
-    --sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", sans-serif;
-    --mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
-    --lift: 0 12px 30px -20px rgba(19, 23, 45, .55);
-    --lift-high: 0 22px 48px -24px rgba(19, 23, 45, .5);
+    /* the font loads from Google; the stack under it carries the same feel offline */
+    --sans: "Manrope", system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", sans-serif;
+    /* IDs and SKUs: a sans built for small sizes, letter-spaced a touch, rather
+       than a typewriter face that goes coarse when it gets small */
+    --mono: "Instrument Sans", "Manrope", system-ui, sans-serif;
+    --lift: 0 10px 30px -18px rgba(28, 33, 74, .28), 0 2px 8px -5px rgba(28, 33, 74, .10);
+    --lift-high: 0 26px 56px -26px rgba(28, 33, 74, .38), 0 4px 14px -8px rgba(28, 33, 74, .14);
+    /* one bubble radius for the big surfaces, stepped down for what sits inside */
+    --r-bubble: 28px;
+    --r-card: 24px;
+    --r-inner: 16px;
+    --ease-bubble: cubic-bezier(.32, .72, .35, 1);
+    /* strong ease-out for anything entering or answering a press */
+    --ease-out: cubic-bezier(.23, 1, .32, 1);
+    --ease-in-out: cubic-bezier(.77, 0, .175, 1);
   }
+
+  /* Dark: the canvas dims to a deep violet, the cards turn charcoal, and the
+     brand lifts to a lighter lilac so it still reads on them. Everything else
+     follows the tokens. */
+  html[data-theme="dark"] {
+    --brand: #b08cff;
+    --brand-deep: #c9b0ff;
+    --brand-soft: #2c2050;
+    --brand-line: #4a3684;
+    --ink: #f3eefb;
+    --ink-soft: #d3cbe6;
+    --muted: #a198bb;
+    --page: #0f0a1a;
+    --card: #1c1626;
+    --line: #3f3657;
+    --line-soft: #332b47;
+    --tint: #2c2541;
+    --tint-2: #372f4e;
+    --tint-3: #43395f;
+    --ok: #4fd39c;
+    --ok-soft: #173327;
+    --canvas: linear-gradient(152deg, #120725 0%, #24104a 46%, #3a165c 100%);
+    --lift: 0 10px 30px -18px rgba(0, 0, 0, .6), 0 2px 8px -5px rgba(0, 0, 0, .4);
+    --lift-high: 0 26px 56px -26px rgba(0, 0, 0, .7), 0 4px 14px -8px rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+  html[data-theme="dark"] .bg { opacity: .55; }
+  html[data-theme="dark"] .composer__field::placeholder, html[data-theme="dark"] .search::placeholder,
+  html[data-theme="dark"] .trigger .placeholder { color: #7d7595; }
+  html[data-theme="dark"] .stat__icon--amber { background: #3a2410; color: #ffb066; }
+  html[data-theme="dark"] .stat__icon--slate { background: #232c44; color: #9fb4e6; }
+  html[data-theme="dark"] .stat__icon--kraft { background: #352718; color: #d9a976; }
+  html[data-theme="dark"] .problem { background: #3a1c1a; border-color: #5e2a26; color: #ffb4a8; }
+  html[data-theme="dark"] .blank__art { background: radial-gradient(circle at 50% 32%, #2d2542 0%, #241d38 54%, #1e1830 100%); }
+  html[data-theme="dark"] .thumb { background: #f3f1f8; }
+  html[data-theme="dark"] .side-hero__cta .send-btn .send-btn__done { color: #12784a; }
+  html[data-theme="dark"] .icon-btn { border-color: #4d4368; }
+  html[data-theme="dark"] .icon-btn--quiet { border-color: transparent; }
+  html[data-theme="dark"] .icon-btn--quiet:hover, html[data-theme="dark"] .icon-btn--wordy:hover { border-color: #4d4368; }
+  /* the logo's white plate turns to black and is screened away, so the mark
+     sits on the dark card in its own colours, lightened */
+  html[data-theme="dark"] .topbar__logo img { filter: invert(1) hue-rotate(180deg) brightness(1.15); mix-blend-mode: screen; }
 
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
+
+  /* The page itself never scrolls: the workspace does, so the fade at its top
+     and bottom edges can be drawn against its own box. */
+  html, body { height: 100%; overflow: hidden; }
 
   body {
     margin: 0;
@@ -42,95 +154,228 @@
 
   /* ---------- shell ---------- */
 
-  .app { display: flex; min-height: 100vh; }
-
-  .rail {
-    position: sticky;
-    top: 0;
-    flex: none;
+  /* The canvas is the brand itself: Western Digital's purple, deep violet at
+     one corner running to magenta at the other, with two soft lights drifting
+     across it on a slow loop — transform only, so it costs the page nothing.
+     A faint floor grid over it is the one nod to the warehouse. The shell
+     never scrolls; the cards do. */
+  .app {
+    position: relative;
     display: flex;
     flex-direction: column;
-    width: 236px;
+    gap: 12px;
     height: 100vh;
-    padding: 20px 14px 16px;
-    background: var(--brand);
-    color: #fff;
-  }
-  .rail__brand { display: flex; align-items: center; gap: 11px; padding: 6px 10px 20px; }
-  .rail__brand--logo { display: block; padding: 2px 4px 20px; }
-
-  .rail__logo {
-    display: block;
-    padding: 9px 13px;
-    background: #fff;
-    border-radius: 15px;
-    box-shadow: 0 10px 22px -16px rgba(0, 0, 0, .6);
-  }
-  .rail__logo img { display: block; width: 100%; height: auto; }
-  .rail__mark {
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 36px;
-    flex: none;
-    border-radius: 11px;
-    background: rgba(255, 255, 255, .18);
+    height: 100dvh;
+    padding: 14px 14px 0;
     overflow: hidden;
+    background: var(--canvas);
+    isolation: isolate;
+    transition: background .4s ease;
   }
-  .rail__mark img { width: 100%; height: 100%; object-fit: contain; }
-  .rail__brand b { display: block; font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; }
-  .rail__brand span { display: block; font-size: 11.5px; color: rgba(255, 255, 255, .68); }
+  .bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  /* The floor grid creeps diagonally, one tile every ninety seconds, so it is
+     only ever noticed as a change and never as movement. It and the lights
+     speed up while the page is scrolled and ease back after. */
+  .bg__grid {
+    position: absolute;
+    inset: -48px 0 0 -48px;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, .13) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, .13) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 40%, transparent 92%);
+    mask-image: radial-gradient(ellipse at 50% 40%, #000 40%, transparent 92%);
+    will-change: transform;
+    animation: creep 14s linear infinite;
+  }
+  @keyframes creep {
+    from { transform: translate(0, 0); }
+    to { transform: translate(48px, 48px); }
+  }
+  .bg__blob {
+    position: absolute;
+    width: 62vmax;
+    height: 62vmax;
+    border-radius: 50%;
+    will-change: transform;
+  }
+  /* the bright light rides in a wrapper the pointer can pull on, so its own
+     drift and the pull never fight over one transform */
+  .bg__magnet { position: absolute; inset: 0; will-change: transform; }
+  .bg__blob--a {
+    top: -28vmax;
+    left: -18vmax;
+    background: radial-gradient(circle, rgba(201, 130, 255, .7) 0%, rgba(201, 130, 255, 0) 62%);
+    animation: drift-a 17s ease-in-out infinite alternate;
+  }
+  .bg__blob--b {
+    right: -22vmax;
+    bottom: -30vmax;
+    background: radial-gradient(circle, rgba(255, 110, 199, .58) 0%, rgba(255, 110, 199, 0) 62%);
+    animation: drift-b 22s ease-in-out infinite alternate;
+  }
+  .bg__blob--c {
+    top: 30%;
+    left: 40%;
+    width: 40vmax;
+    height: 40vmax;
+    background: radial-gradient(circle, rgba(76, 20, 150, .5) 0%, rgba(76, 20, 150, 0) 64%);
+    animation: drift-c 19s ease-in-out infinite alternate;
+  }
+  @keyframes drift-a {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(30vmax, 18vmax) scale(1.18); }
+  }
+  @keyframes drift-b {
+    from { transform: translate(0, 0) scale(1.05); }
+    to { transform: translate(-28vmax, -22vmax) scale(.92); }
+  }
+  @keyframes drift-c {
+    from { transform: translate(-22vmax, 10vmax); }
+    to { transform: translate(22vmax, -12vmax); }
+  }
 
-  .rail__nav { display: flex; flex-direction: column; gap: 4px; }
-  .rail__link {
+  /* the bar floats as a card of its own, logo left, the two pages as pills */
+  .topbar {
+    position: relative;
+    z-index: 3;      /* its popovers must clear the workspace below */
+    flex: none;
     display: flex;
     align-items: center;
-    gap: 11px;
-    padding: 11px 12px;
-    border-radius: 13px;
-    color: rgba(255, 255, 255, .84);
+    gap: 14px;
+    min-height: 66px;
+    padding: 10px 12px 10px 14px;
+    background: var(--card);
+    border-radius: 22px;
+    box-shadow: 0 18px 40px -28px rgba(20, 8, 50, .6);
+  }
+  .topbar__logo { display: block; flex: none; width: 132px; padding: 4px 6px; }
+  /* the box is sized from the artwork's proportions before a byte of it has
+     arrived, so the space is never seen empty and never jumps */
+  .topbar__logo img { display: block; width: 100%; height: auto; aspect-ratio: 440 / 147; }
+  .topbar__mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    color: var(--ink);
+  }
+  .topbar__mark span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--brand-soft); color: var(--brand); }
+  .topbar__mark b { font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .topbar__nav { display: flex; align-items: center; gap: 6px; margin-left: 10px; }
+  .topbar__link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    color: var(--ink-soft);
     font-size: 14px;
-    font-weight: 500;
-    line-height: 1.25;
+    font-weight: 600;
+    line-height: 1.2;
     text-decoration: none;
+    white-space: nowrap;
   }
-  .rail__link svg { flex: none; opacity: .9; }
-  .rail__link:hover { background: rgba(255, 255, 255, .13); color: #fff; }
-  .rail__link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-  .rail__link.is-active {
-    background: #fff;
-    color: var(--brand);
-    font-weight: 620;
-    box-shadow: 0 10px 22px -14px rgba(0, 0, 0, .65);
+  .topbar__link svg { flex: none; opacity: .8; }
+  .topbar__link:hover { background: var(--tint); color: var(--ink); }
+  .topbar__link:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--brand-soft); }
+  .topbar__link.is-active { background: var(--ink); color: var(--card); }
+  .topbar__link.is-active svg { opacity: 1; }
+  /* Light and dark, as a switch: the knob slides across and the sun turns
+     into the moon as it goes. It is the last thing on the bar. */
+  .tool { position: relative; margin-left: auto; }
+  .theme {
+    margin-left: 0;
+    flex: none;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
   }
-  .rail__link.is-active svg { opacity: 1; }
+  .theme:focus-visible { outline: none; }
+  .theme:focus-visible .theme__track { box-shadow: 0 0 0 3px var(--brand-soft); }
+  .theme__track {
+    position: relative;
+    display: block;
+    width: 52px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--tint-2);
+    border: 1px solid var(--line);
+    transition: background .3s ease, border-color .3s ease;
+  }
+  .theme__knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--card);
+    color: #c2550a;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
+    transition: transform .3s var(--ease-out), color .3s ease;
+  }
+  .theme__knob svg { grid-area: 1 / 1; transition: opacity .2s var(--ease-out), transform .3s var(--ease-out); }
+  .theme__moon { opacity: 0; transform: rotate(-60deg) scale(.6); }
+  .theme[aria-pressed="true"] .theme__track { background: #3d2f66; border-color: #4a3684; }
+  .theme[aria-pressed="true"] .theme__knob { transform: translateX(22px); color: #cdb8ff; }
+  .theme[aria-pressed="true"] .theme__sun { opacity: 0; transform: rotate(60deg) scale(.6); }
+  .theme[aria-pressed="true"] .theme__moon { opacity: 1; transform: none; }
 
   .workspace {
+    position: relative;
+    z-index: 1;
     flex: 1 1 auto;
     min-width: 0;
-    padding: 58px 34px 72px;
-    /* colour gathers behind the title and drains away down the page */
-    background:
-      radial-gradient(130% 58% at 50% -12%, rgba(70, 91, 244, .20), rgba(70, 91, 244, 0) 62%),
-      linear-gradient(180deg, #e6eaff 0, rgba(230, 234, 255, 0) 430px),
-      var(--page);
+    min-height: 0;
+    padding: 58px 22px 72px;
+    /* Always leaves room for the scrollbar, needed or not. Otherwise a view
+       that fits on screen drops the bar and everything centred slides sideways
+       by its width — visible wherever scrollbars take up space, which is
+       Windows and any Mac set to show them always. */
+    overflow-y: scroll;
+    /* applies to anchor jumps and scrollIntoView, not the wheel */
+    scroll-behavior: smooth;
+
+    /* Whatever reaches the top or bottom edge fades into the shell behind it:
+       cards, bubbles and the rows inside them, all as one, so nothing is ever
+       cut off by the edge. The second mask keeps the scrollbar column solid —
+       its width is measured by script, since the fade must not touch it. */
+    --edge: 56px;
+    --sbw: 0px;
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent, #000 var(--edge), #000 calc(100% - var(--edge)), transparent),
+      linear-gradient(#000, #000);
+    -webkit-mask-size: calc(100% - var(--sbw)) 100%, var(--sbw) 100%;
+    -webkit-mask-position: left top, right top;
+    -webkit-mask-repeat: no-repeat;
+    mask-image:
+      linear-gradient(to bottom, transparent, #000 var(--edge), #000 calc(100% - var(--edge)), transparent),
+      linear-gradient(#000, #000);
+    mask-size: calc(100% - var(--sbw)) 100%, var(--sbw) 100%;
+    mask-position: left top, right top;
+    mask-repeat: no-repeat;
   }
   .workspace__inner { max-width: 820px; margin: 0 auto; }
-  .workspace__inner--wide { max-width: 1060px; }
+  .workspace__inner--wide { max-width: 1180px; }
 
-  .page-head { margin-bottom: 22px; text-align: center; }
+  .page-head { margin-bottom: 24px; text-align: center; color: #fff; }
   .page-head h1 {
-    margin: 0 0 6px;
-    font-size: 33px;
-    font-weight: 720;
-    letter-spacing: -0.028em;
+    margin: 0 0 7px;
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
   }
-  .lead { margin: 0 auto; color: var(--muted); font-size: 13.5px; font-weight: 400; max-width: 56ch; }
+  .lead { margin: 0 auto; color: #fff; font-size: 14.5px; font-weight: 500; max-width: 56ch; }
 
   /* the quiet line under the input, like a disclaimer */
   .foot-note {
-    margin: 11px auto 0;
-    color: #8b90a2;
+    margin: 12px auto 0;
+    color: #fff;
     font-size: 11.5px;
     text-align: center;
   }
@@ -140,29 +385,30 @@
   .composer {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 24px;
+    border-radius: var(--r-bubble);
     box-shadow: var(--lift);
-    transition: box-shadow .18s ease, border-color .18s ease;
+    transition: box-shadow .22s ease, border-color .22s ease;
   }
   .composer.is-open, .composer:focus-within { border-color: var(--brand-line); box-shadow: var(--lift-high); }
 
   .composer__field {
     width: 100%;
-    padding: 18px 22px 8px;
+    padding: 19px 24px 9px;
     background: none;
     border: 0;
     color: var(--ink);
     font: inherit;
     font-size: 17px;
+    font-weight: 500;
   }
-  .composer__field::placeholder { color: #9aa0b4; }
+  .composer__field::placeholder { color: #9aa0b4; font-weight: 450; }
   .composer__field:focus { outline: none; }
 
   .composer__list {
     max-height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: max-height .24s cubic-bezier(.32, .72, .35, 1), opacity .16s ease;
+    transition: max-height .26s var(--ease-bubble), opacity .16s ease;
   }
   .composer.is-open .composer__list { max-height: 330px; opacity: 1; }
 
@@ -214,38 +460,53 @@
   }
   .pick__edit:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 999px; }
 
-  /* the chip the next pick will overwrite */
-  .pick.is-editing { background: var(--card); }
-  .pick.is-editing::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    padding: 1.6px;
-    border-radius: inherit;
-    background: repeating-linear-gradient(45deg, var(--brand) 0 5px, transparent 5px 10px);
-    background-size: 14.15px 14.15px;
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    animation: ants 620ms linear infinite;
-    pointer-events: none;
+  /* The chip the next pick will overwrite turns solid and breathes: unlike the
+     others at a glance, and unmistakably the one that is waiting. */
+  .pick { transition: background-color .18s ease, color .18s ease, box-shadow .18s ease, scale .18s var(--ease-out); }
+  @media (hover: hover) and (pointer: fine) { .pick:hover { scale: 1.04; } }
+  .pick.is-editing {
+    background: var(--brand);
+    color: #fff;
+    box-shadow: 0 0 0 3px var(--brand-soft);
+    animation: armed 1.6s ease-in-out infinite;
+  }
+  .pick.is-editing .pick__drop { color: #fff; opacity: .8; }
+  .pick.is-editing .pick__drop:hover { background: rgba(255, 255, 255, .22); opacity: 1; }
+
+  @keyframes armed {
+    0%, 100% { box-shadow: 0 0 0 3px var(--brand-soft); }
+    50% { box-shadow: 0 0 0 6px rgba(111, 45, 217, .16); }
   }
 
-  @keyframes ants { to { background-position: 14.15px 0; } }
-
   /* page opening: everything lifts into place once, staggered */
+  @keyframes fade-only { from { opacity: 0; } to { opacity: 1; } }
   @keyframes rise {
-    from { opacity: 0; transform: translateY(12px); }
+    from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: none; }
   }
   /* fill-mode is backwards, not both: an element still filling a transform
      animation acts as the containing block for its fixed children, which sends
      the hover sub-list off to the side of the screen */
-  .page-head h1 { animation: rise 520ms cubic-bezier(.22, .68, .3, 1) backwards 60ms; }
-  .page-head .lead { animation: rise 520ms cubic-bezier(.22, .68, .3, 1) backwards 140ms; }
-  .workspace > div > :nth-child(2) { animation: rise 560ms cubic-bezier(.22, .68, .3, 1) backwards 210ms; }
-  .workspace .foot-note { animation: rise 520ms cubic-bezier(.22, .68, .3, 1) backwards 300ms; }
+  /* Short, closely spaced: the composer is built by script, so its turn only
+     comes once the page's own JavaScript has run. A long delay on top of that
+     is what made the bubble arrive noticeably after the heading. */
+  /* Held back while the page is still arriving, then let go all at once, in
+     order, from the rail across to the results. */
+  .is-loading .topbar__logo, .is-loading .topbar__nav,
+  .is-loading .page-head h1, .is-loading .page-head .lead,
+  .is-loading .workspace > div > :nth-child(2), .is-loading .workspace .foot-note,
+  .is-loading .result { opacity: 0; }
+
+  /* A page load is a once-a-visit moment, so the sequence is given room: each
+     piece starts a clear beat after the one before, and the rise is long enough
+     to be seen as a rise. */
+  .is-ready .topbar__logo { animation: rise 560ms var(--ease-out) backwards 0ms; }
+  .is-ready .topbar__nav { animation: rise 560ms var(--ease-out) backwards 90ms; }
+  .is-ready .page-head h1 { animation: rise 600ms var(--ease-out) backwards 140ms; }
+  .is-ready .page-head .lead { animation: rise 560ms var(--ease-out) backwards 230ms; }
+  .is-ready .workspace > div > :nth-child(2) { animation: rise 640ms var(--ease-out) backwards 330ms; }
+  .is-ready .workspace .foot-note { animation: rise 560ms var(--ease-out) backwards 460ms; }
+  .is-ready .result { animation: rise 640ms var(--ease-out) backwards 540ms; }
 
   /* ---------- product thumbnail ---------- */
 
@@ -258,7 +519,7 @@
     overflow: hidden;
     background: var(--tint);
     border: 1px solid var(--line-soft);
-    border-radius: 16px;
+    border-radius: 18px;
   }
   .thumb img { width: 100%; height: 100%; object-fit: cover; }
   .thumb svg { width: 78%; height: 78%; }
@@ -309,9 +570,10 @@
     padding: 0;
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 50%;
     color: var(--ink-soft);
     cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
   }
   .icon-btn:hover { background: var(--tint); color: var(--ink); }
   .icon-btn:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
@@ -320,29 +582,134 @@
   .icon-btn--quiet { border-color: transparent; background: none; color: var(--muted); }
   .icon-btn--quiet:hover { background: var(--tint); }
   .icon-btn--send {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 40px;
+    height: 40px;
+    padding: 0;
     background: var(--brand);
     border-color: var(--brand);
+    border-radius: 999px;
     color: #fff;
-    transition: background .18s ease, border-color .18s ease;
+    overflow: hidden;
+    box-shadow: 0 8px 18px -9px rgba(111, 45, 217, .75);
   }
   .icon-btn--send:hover { background: var(--brand-deep); color: #fff; }
-  .icon-btn--send.is-sent { background: var(--ok); border-color: var(--ok); }
+  /* Once the tick is in, the pill widens leftward to say so — the clear button
+     beside it moves over, and comes back as the pill draws in. */
+  .icon-btn--send.is-sent {
+    width: var(--send-w, 92px);
+    background: var(--ok);
+    border-color: var(--ok);
+    box-shadow: 0 8px 18px -9px rgba(0, 153, 106, .7);
+    transition-delay: 0s, 0s, 0s, 0s, .18s, 0s;
+  }
+  .icon-btn--send .send__glyphs { position: relative; flex: none; width: 38px; height: 38px; }
+  .send__word {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    padding-right: 14px;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity .18s var(--ease-out), transform .18s var(--ease-out);
+  }
+  .icon-btn--send.is-sent .send__word { opacity: 1; transform: none; transition-delay: .26s; }
+
+  /* Both glyphs sit in the button at once; the arrow lifts out as the tick
+     settles in. Transitions rather than a swap, so a second send while the
+     first is still showing picks up from wherever the glyphs are. */
+  .icon-btn--send .send__ic {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    transition: opacity .18s var(--ease-out), transform .18s var(--ease-out);
+  }
+  .icon-btn--send .send__check { opacity: 0; transform: scale(.6); }
+  .icon-btn--send.is-sent .send__arrow { opacity: 0; transform: translateY(-9px); }
+  .icon-btn--send.is-sent .send__check { opacity: 1; transform: none; }
+
+  /* Clear answers with its own name: the cross folds into a tick — the two
+     strokes slide and shorten into place rather than swapping — the pill
+     widens leftward to say "Cleared", then draws back to a cross as the word
+     fades with it. */
+  /* A round button that says its name under the pointer: it opens into a pill
+     with a short word, and closes when the pointer leaves. At the left of a
+     bar it opens rightward; at the right, leftward, with the button beside it
+     unmoved. Focus opens it too, so the keyboard gets the same words. */
+  .icon-btn--wordy {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 38px;
+    padding: 0 0 0 10px;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .icon-btn--wordy > svg { flex: none; }
+  .btn-word {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    padding-right: 12px;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity .16s var(--ease-out), transform .16s var(--ease-out);
+  }
+  .icon-btn--wordy:focus-visible { width: var(--word-w, 100px); }
+  .icon-btn--wordy:focus-visible .btn-word { opacity: 1; transform: none; transition-delay: .08s; }
+  @media (hover: hover) and (pointer: fine) {
+    .icon-btn--wordy:hover { width: var(--word-w, 100px); }
+    .icon-btn--wordy:hover .btn-word { opacity: 1; transform: none; transition-delay: .08s; }
+  }
+
+  /* Clear answers with its own name: the cross folds into a tick — the two
+     strokes slide and shorten into place rather than swapping — and only once
+     the tick has formed does the pill widen to say "Cleared", then it draws
+     back as the word fades with it. The button keeps its own colour; only the
+     tick turns green. */
+  .icon-btn--clear { transition-delay: 0s, 0s, 0s, 0s, 0s, 0s, 0s, 0s; }
+  .icon-btn--clear.is-done { width: var(--word-w, 108px); transition-delay: 0s, 0s, 0s, 0s, .36s, 0s, 0s, 0s; }
+  .icon-btn--clear.is-done .btn-word { opacity: 1; transform: none; transition-delay: .46s; }
+  .icon-btn--clear .morph line {
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    transform-origin: 9px 9px;
+    transition: transform .36s var(--ease-out) .22s, stroke .2s ease .22s;
+  }
+  .icon-btn--clear.is-done .morph line { stroke: var(--ok); transition-delay: 0s; }
+  .icon-btn--clear.is-done line.morph__a { transform: translate(-3.5px, 2.5px) scale(.46); }
+  .icon-btn--clear.is-done line.morph__b { transform: translate(2px, .5px) scale(.86); transition-delay: 60ms; }
+
+  /* The plus turns a quarter of the way round and lands as a cross, so the same
+     button that opened a list is visibly the one that closes it. */
+  .icon-btn--toggle svg { transition: transform .32s cubic-bezier(.3, 1.25, .5, 1); }
+  .icon-btn--toggle.is-x svg { transform: rotate(45deg); }
+  .icon-btn--toggle.is-x {
+    background: var(--brand-soft);
+    border-color: var(--brand-line);
+    color: var(--brand-deep);
+  }
 
   /* one ring leaving the button, so a repeat send still reads as a send */
   .icon-btn--send::before {
     content: '';
     position: absolute;
     inset: -3px;
-    border-radius: 15px;
+    border-radius: 999px;
     border: 2px solid var(--ok);
     opacity: 0;
     pointer-events: none;
   }
-  .icon-btn--send.is-sent::before { animation: sent-ring .6s cubic-bezier(.25, .8, .4, 1); }
+  .icon-btn--send.is-ringing::before { animation: sent-ring .5s var(--ease-out); }
 
   @keyframes sent-ring {
     from { transform: scale(.86); opacity: .6; }
-    to { transform: scale(1.5); opacity: 0; }
+    to { transform: scale(1.6); opacity: 0; }
   }
 
   /* shared hover hint, used by icon buttons and copy buttons */
@@ -353,7 +720,7 @@
     bottom: calc(100% + 7px);
     padding: 5px 9px;
     background: var(--ink);
-    color: #fff;
+    color: var(--card);
     border-radius: 7px;
     font-size: 12px;
     font-weight: 500;
@@ -367,6 +734,40 @@
   .tip:hover::after, .tip:focus-visible::after, .tip.is-done::after, .tip.is-fail::after { opacity: 1; }
   .tip--left::after { right: auto; left: 0; }
 
+  /* ---------- passing notices ---------- */
+
+  .toasts {
+    position: fixed;
+    z-index: 80;
+    left: 50%;
+    bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    max-width: min(92vw, 430px);
+    padding: 12px 17px;
+    background: var(--ink);
+    color: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 20px 44px -20px rgba(12, 15, 30, .7);
+    font-size: 13.5px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity .18s ease, transform .24s cubic-bezier(.22, .68, .3, 1);
+  }
+  .toast.is-in { opacity: 1; transform: none; }
+  .toast svg { flex: none; color: #ffb057; }
+  .toast b { font-family: var(--mono); font-size: 12.5px; font-weight: 650; }
+
   /* ---------- dropdown internals ---------- */
 
   .picker { position: relative; }
@@ -378,17 +779,19 @@
     gap: 10px;
     width: 100%;
     min-height: 44px;
-    padding: 0 14px;
+    padding: 0 15px;
     background: var(--tint);
     border: 1px solid transparent;
-    border-radius: 14px;
+    border-radius: var(--r-inner);
     color: var(--ink);
     font: inherit;
     font-size: 14.5px;
+    font-weight: 500;
     text-align: left;
     cursor: pointer;
+    transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
   }
-  .trigger:hover { background: #eceef6; }
+  .trigger:hover { background: var(--tint-2); }
   .trigger[aria-expanded="true"] { background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
   .trigger .chev { flex: none; color: var(--muted); transition: transform .15s ease; }
   .trigger[aria-expanded="true"] .chev { transform: rotate(180deg); }
@@ -403,20 +806,36 @@
     right: 0;
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: 20px;
     box-shadow: var(--lift-high);
     overflow: hidden;
   }
   .panel[hidden] { display: none; }
 
+  /* The row panel unfolds on max-height, the way the composer bubble does.
+     Deliberately not a transform: a transformed panel becomes the containing
+     block for the fixed sub-list inside it, which would both misplace the
+     sub-list and clip it against this panel's own overflow. */
+  .panel.is-mounted { animation: panel-in .26s var(--ease-bubble); }
+  .panel.is-out { animation: panel-out .18s ease forwards; pointer-events: none; }
+
+  @keyframes panel-in {
+    from { opacity: 0; max-height: 0; }
+    to { opacity: 1; max-height: 460px; }
+  }
+  @keyframes panel-out {
+    from { opacity: 1; max-height: 460px; }
+    to { opacity: 0; max-height: 0; }
+  }
+
   .panel-search { padding: 9px; border-bottom: 1px solid var(--line-soft); }
   .search {
     width: 100%;
     height: 36px;
-    padding: 0 12px;
+    padding: 0 13px;
     background: var(--tint);
     border: 1px solid transparent;
-    border-radius: 11px;
+    border-radius: 12px;
     color: var(--ink);
     font: inherit;
     font-size: 14px;
@@ -440,7 +859,15 @@
   .head .h-sku { flex: none; margin-left: auto; }
   .head .h-sku[hidden] { display: none; }
 
-  .menu { margin: 0; padding: 7px; list-style: none; max-height: 270px; overflow-y: auto; }
+  .menu {
+    margin: 0;
+    padding: 8px 9px;
+    list-style: none;
+    max-height: 270px;
+    overflow-y: auto;
+    overscroll-behavior: contain;   /* reaching the end stops here, not on the page */
+    scrollbar-width: thin;
+  }
   .menu > li { position: relative; }
 
   .row {
@@ -452,15 +879,59 @@
     padding: 6px 12px;
     background: none;
     border: 0;
-    border-radius: 12px;
+    border-radius: 14px;
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
+    position: relative;
+    transition: background .14s ease, color .14s ease, scale .16s var(--ease-out);
   }
-  .row:hover, .row:focus-visible { background: var(--tint); outline: none; }
-  .row:focus-visible { box-shadow: inset 0 0 0 2px var(--brand); }
-  .row[aria-current="true"] { background: var(--brand-soft); color: var(--brand-deep); }
+  .row:hover { background: var(--tint); }
+  /* plain :focus, not :focus-visible — arrowing through the list has to show
+     where you are even when the list was opened with the mouse */
+  .row:focus {
+    background: var(--brand-soft);
+    color: var(--brand-deep);
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--brand);
+  }
+  /* the last pick is not singled out — a row lights up only under the pointer
+     (or keyboard focus); what is taken is shown by its tick instead */
+
+  /* A drive that is already on the list wears a tick, so the list shows what
+     is taken without having to be remembered. */
+  .row.is-taken { color: var(--brand-deep); }
+  .row__tick {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    margin-left: 4px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: #fff;
+  }
+  .row__tick svg { width: 11px; height: 11px; }
+
+  /* The pressed row swells for a beat and takes its tick before the list folds
+     away, so the pick is seen to land. */
+  .row.is-picked {
+    background: var(--brand-soft);
+    color: var(--brand-deep);
+    animation: row-pick .22s var(--ease-out);
+  }
+  .row.is-picked .row__tick { animation: tick-in .22s var(--ease-out); }
+  @keyframes row-pick {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+  }
+  @keyframes tick-in {
+    from { opacity: 0; transform: scale(.5); }
+    to { opacity: 1; transform: none; }
+  }
 
   .row .cap { flex: none; min-width: 70px; font-size: 15.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
   .row .name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
@@ -470,11 +941,23 @@
   .row .arrow { flex: none; color: var(--muted); transition: transform .15s ease; }
   li.group.is-open > .row .arrow { transform: rotate(90deg); }
 
-  /* the sub-list keeps its own bubble */
+  /* The sub-list keeps its own bubble. It is mounted and unmounted from script
+     so it can unfold and fold away like the list it came out of; the animation
+     rides on the card inside, which leaves the shell's box untransformed for
+     placeFlyout to measure. */
   .flyout { display: none; }
-  .flyout ul { margin: 0; padding: 7px; list-style: none; }
+  .flyout.is-mounted { display: block; }
+  .flyout ul { margin: 0; padding: 8px 9px; list-style: none; }
   .flyout .stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .flyout .stack b { font-weight: 600; font-size: 13.5px; }
+
+  .flyout .card {
+    opacity: 0;
+    transform: translateY(-7px) scale(.97);
+    transform-origin: top left;
+    transition: opacity .17s ease, transform .25s var(--ease-bubble);
+  }
+  .flyout.is-in .card { opacity: 1; transform: none; }
 
   @media (min-width: 900px) {
     .flyout {
@@ -486,18 +969,22 @@
     .flyout .card {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 18px;
+      border-radius: 20px;
       box-shadow: var(--lift-high);
     }
-    li.group:hover > .flyout, li.group.is-open > .flyout { display: block; }
     .flyout .row { min-height: 50px; }
     .flyout .row .cap { display: none; }
   }
 
   @media (max-width: 899px) {
-    .flyout { padding: 2px 0 6px 20px; }
-    li.group.is-open > .flyout { display: block; }
-    .flyout .card { border-left: 2px solid var(--brand-line); }
+    .flyout {
+      padding: 0 0 0 20px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .26s var(--ease-bubble);
+    }
+    .flyout.is-in { max-height: 420px; }
+    .flyout .card { margin: 2px 0 6px; border-left: 2px solid var(--brand-line); }
     .flyout .row { min-height: 50px; }
     .flyout .row .cap { display: none; }
   }
@@ -510,27 +997,340 @@
   .picker--compact .head { padding: 8px 14px; font-size: 11px; }
   .picker--compact .head .h-cap { min-width: 54px; }
 
+  /* ---------- results toolbar ---------- */
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .segmented {
+    position: relative;
+    display: inline-flex;
+    padding: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .segmented__thumb {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: var(--ink);
+    border-radius: 999px;
+    box-shadow: 0 8px 18px -12px rgba(20, 24, 45, .8);
+    /* a touch of overshoot, so the switch reads as a slide and not a jump */
+    transition: transform .34s cubic-bezier(.34, 1.26, .5, 1);
+  }
+  .segmented.is-second .segmented__thumb { transform: translateX(100%); }
+  .segmented__opt {
+    position: relative;
+    z-index: 1;
+    min-width: 92px;
+    padding: 7px 15px;
+    background: none;
+    border: 0;
+    border-radius: 999px;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color .24s ease;
+  }
+  .segmented__opt.is-on { color: var(--card); }
+  .segmented__opt:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .sorter { position: relative; }
+  /* An icon at rest; it widens to show the current order under the pointer,
+     with the keyboard, or while its menu is open. The width it needs is
+     measured from the text whenever the order changes. */
+  .sorter__btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 38px;
+    height: 38px;
+    padding: 0 0 0 10px;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 550;
+    cursor: pointer;
+  }
+  .sorter__btn svg { flex: none; color: var(--muted); }
+  .sorter__btn b { font-weight: 550; color: var(--muted); }
+  .sorter__text {
+    display: inline-flex;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity .16s var(--ease-out), transform .16s var(--ease-out);
+  }
+  .sorter__btn:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .sorter__btn:focus-visible, .sorter__btn[aria-expanded="true"], .sorter__btn.is-held {
+    width: var(--sort-w, 200px);
+    border-color: var(--brand-line);
+  }
+  .sorter__btn:focus-visible .sorter__text,
+  .sorter__btn[aria-expanded="true"] .sorter__text,
+  .sorter__btn.is-held .sorter__text { opacity: 1; transform: none; transition-delay: .1s; }
+
+  .sorter__text { gap: 5px; align-items: center; }
+  /* the name's slot clips one line; names move through it vertically */
+  /* the slot's line matches its height, so the name sits on the same baseline as "Sort:" */
+  .sorter__slot { position: relative; display: inline-grid; align-items: center; height: 1.3em; line-height: 1.3em; overflow: hidden; color: var(--muted); font-weight: 550; }
+  .sorter__name {
+    grid-area: 1 / 1;
+    justify-self: start;      /* each name is as wide as its own text */
+    white-space: nowrap;
+    transition: transform .26s var(--ease-out), opacity .2s var(--ease-out);
+  }
+  .sorter__name.is-above { transform: translateY(-110%); opacity: 0; }
+  .sorter__name.is-below { transform: translateY(110%); opacity: 0; }
+
+  .sorter__dir { display: inline-flex; color: var(--muted); }
+  /* the arrow has its own slot, so it simply turns about its centre */
+  .sorter__dir .arrow { transform-origin: 8px 8px; transition: transform .28s var(--ease-in-out); }
+  .sorter__dir .arrow.is-down { transform: rotate(180deg); }
+  @media (hover: hover) and (pointer: fine) {
+    .sorter__btn:hover { width: var(--sort-w, 200px); border-color: var(--brand-line); }
+    .sorter__btn:hover .sorter__text { opacity: 1; transform: none; transition-delay: .1s; }
+  }
+
+  .sortmenu {
+    position: absolute;
+    z-index: 30;
+    right: 0;
+    top: calc(100% + 8px);
+    min-width: 226px;
+    padding: 6px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--lift-high);
+  }
+  .sortmenu[hidden] { display: none; }
+  .sortmenu__label { padding: 7px 12px 5px; color: var(--muted); font-size: 11.5px; font-weight: 650; }
+  .sortmenu hr { margin: 6px 4px; border: 0; border-top: 1px solid var(--line-soft); }
+
+  .sortopt {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 12px;
+    background: none;
+    border: 0;
+    border-radius: 11px;
+    color: inherit;
+    font: inherit;
+    font-size: 13.5px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .sortopt:hover { background: var(--tint); }
+  .sortopt:focus-visible { outline: none; background: var(--tint); box-shadow: inset 0 0 0 2px var(--brand); }
+  .sortopt .tick { flex: none; width: 15px; color: var(--brand); opacity: 0; }
+  .sortopt.is-on { color: var(--brand-deep); font-weight: 600; }
+  .sortopt.is-on .tick { opacity: 1; }
+
+  /* ---------- compact list ---------- */
+
+  .compact { display: grid; gap: 9px; }
+
+  /* Rows in the same copied state share a bubble, so a run merges and a lone
+     copied row splits the list in two. A copied bubble tucks in and goes quiet. */
+  .compact__group {
+    transition: margin .28s cubic-bezier(.32, .72, .35, 1), background-color .22s ease,
+                border-color .22s ease, box-shadow .22s ease, opacity .22s ease;
+  }
+  .compact__group.is-copied {
+    margin: 0 20px;
+    background: var(--tint-2);
+    border-color: var(--tint-3);
+    box-shadow: none;
+    opacity: .92;
+  }
+  .compact__group.is-copied .crow { min-height: 40px; }
+  .compact__group.is-copied .crow__cap b,
+  .compact__group.is-copied .cell--weight > span { color: var(--ink-soft); }
+  .compact__group.is-copied .cell > span { opacity: .8; }
+  .compact__group.is-copied .crow:hover { background: var(--tint-3); }
+
+  .compact__head, .crow {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1.2fr) minmax(0, 1fr) 112px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+  }
+  /* the column headers get a bubble of their own that joins the first group
+     below it — unless that group is tucked in as copied, when it stands alone */
+  .compact__head {
+    height: 38px;
+    margin-bottom: -9px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    border-radius: 19px 19px 0 0;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .compact__head + .compact__group:not(.is-copied) { border-top-left-radius: 0; border-top-right-radius: 0; }
+  .compact__head + .compact__group:not(.is-copied) .crow:first-child { border-top-left-radius: 0; border-top-right-radius: 0; }
+  .compact__head:has(+ .is-copied) { margin-bottom: 0; border-bottom: 1px solid var(--line); border-radius: 19px; }
+  .compact__head span:last-child { text-align: right; }
+
+  .crow { min-height: 46px; border-bottom: 1px solid var(--line-soft); }
+  .crow:last-child { border-bottom: 0; }
+  .crow:hover { background: var(--tint); }
+  /* the group no longer clips, so the rows carry its corners themselves */
+  .crow:first-child { border-radius: 19px 19px 0 0; }
+  .crow:last-child { border-radius: 0 0 19px 19px; }
+  .crow:only-child { border-radius: 19px; }
+
+  .crow__cap { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .crow__cap b {
+    flex: none;
+    font-size: 14px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .crow__cap span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 650;
+  }
+
+  .crow .cell { display: flex; align-items: center; gap: 1px; min-width: 0; }
+  .crow .cell > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  /* the weight's copy pill is anchored by its left edge and opens rightward,
+     past the row's edge if it must, so the figure never moves */
+  .crow .cell--weight { position: relative; justify-content: flex-end; padding-right: 26px; }
+  .crow .cell--weight .copy { position: absolute; left: calc(100% - 25px); top: 50%; translate: 0 -50%; }
+  .crow .cell--weight .copy:hover, .crow .cell--weight .copy.is-done, .crow .cell--weight .copy.is-fail { z-index: 2; }
+  .crow .cell--weight > span {
+    font-family: var(--sans);
+    font-size: 14.5px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+  .crow .cell--weight small { color: var(--muted); font-size: 11.5px; font-weight: 550; }
+  .crow .copy { --copy-size: 25px; opacity: .38; }
+  .crow:hover .copy { opacity: .75; }
+  .crow .copy:hover, .crow .copy:focus-visible, .crow .copy.is-done { opacity: 1; }
+
+  @media (max-width: 700px) {
+    .compact__head, .crow {
+      grid-template-columns: 120px minmax(0, 1fr) 96px;
+      grid-template-areas: "cap id weight" ". sku sku";
+      padding: 8px 14px;
+      row-gap: 2px;
+    }
+    .compact__head { display: none; }
+    .crow__cap { grid-area: cap; }
+    .crow .cell--id { grid-area: id; }
+    .crow .cell--sku { grid-area: sku; }
+    .crow .cell--weight { grid-area: weight; }
+    .compact__group.is-copied { margin: 0 12px; }
+  }
+
   /* ---------- cards and results ---------- */
 
   .card {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 20px;
+    border-radius: var(--r-card);
     box-shadow: var(--lift);
   }
 
   .result { margin-top: 24px; display: grid; gap: 16px; }
+  /* the toolbar stays put and only this swaps, so the view pill can animate */
+  .result__body { display: grid; gap: 16px; }
+
+  /* Fresh results rise into place as they come into view, each a beat after
+     the one above it. Only for results that were just produced — a sort, a
+     view switch or a copy redraws the list without any of this. */
+  .reveal { opacity: 0; transform: translateY(10px) scale(.985); }
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+    transition: opacity .24s var(--ease-out) var(--stagger, 0ms),
+                transform .28s var(--ease-out) var(--stagger, 0ms);
+  }
+
+  /* Each standard card sits in a slot. The slot carries the entrance and the
+     press; the card inside answers the scroll, so the two never fight over
+     one transform. */
+  /* a copied card tucks in the way a copied compact bubble does */
+  .card-slot { min-width: 0; transition: margin .28s var(--ease-bubble); }
+  .card-slot.is-copied { margin: 0 20px; }
+
+  /* A card is at full size through the middle of the view and eases down a
+     touch while it crosses either edge. Driven by the scroll position itself,
+     off the main thread. Arriving animates `scale`, leaving animates
+     `transform` — two properties on purpose: two animations on one property
+     would each hold the other's resting value and cancel out. */
+  @supports (animation-timeline: view()) {
+    .card-slot > .card {
+      animation: card-arrive linear both, card-leave linear both;
+      animation-timeline: view(), view();
+      animation-range: entry, exit;
+    }
+    @keyframes card-arrive { from { scale: .965; } to { scale: 1; } }
+    @keyframes card-leave { from { transform: scale(1); } to { transform: scale(.965); } }
+  }
+
+  /* Copying presses the card down — a dip and back — and it stays a little
+     flatter afterwards, which is what a pressed thing looks like. */
+  .card-slot.is-pressed { animation: press .24s var(--ease-out); }
+  @keyframes press {
+    0% { transform: scale(1); }
+    40% { transform: scale(.98); }
+    100% { transform: scale(1); }
+  }
+
+  /* In the compact view the row itself is the bubble that gives: it takes a
+     shape of its own for the moment it is pressed. */
+  .crow.is-pressed { border-radius: 14px; animation: press-row .26s var(--ease-out); }
+  @keyframes press-row {
+    0% { transform: scale(1); background-color: transparent; }
+    40% { transform: scale(.975); background-color: var(--brand-soft); }
+    100% { transform: scale(1); background-color: transparent; }
+  }
 
   .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
 
   .stat {
+    position: relative;
     display: flex;
     align-items: flex-start;
     gap: 14px;
     padding: 18px 20px;
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 20px;
+    border-radius: var(--r-card);
     box-shadow: var(--lift);
   }
   .stat__icon {
@@ -539,14 +1339,18 @@
     width: 42px;
     height: 42px;
     flex: none;
-    border-radius: 13px;
+    border-radius: 14px;
     background: var(--brand-soft);
     color: var(--brand);
   }
-  .stat__icon--amber { background: #fff1e2; color: #c2550a; }
-  .stat__icon--slate { background: #eef0f6; color: var(--ink-soft); }
+  /* each figure keeps the colour of its material: blueprint indigo for the
+     dimensions, a warm amber for weight, cardboard for cartons, steel for the
+     drives — distinct from one another and from the page's own blue */
+  .stat__icon--amber { background: #fff0dd; color: #c25a0c; }
+  .stat__icon--slate { background: #e9eef8; color: #4a5a7d; }
+  .stat__icon--kraft { background: #f5eadb; color: #96683a; }
   .stat__body { min-width: 0; flex: 1 1 auto; }
-  .stat__label { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  .stat__label { color: var(--muted); font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stat__value {
     display: flex;
     align-items: baseline;
@@ -558,7 +1362,27 @@
     line-height: 1.2;
   }
   .stat__value small { font-size: 14px; font-weight: 550; color: var(--muted); letter-spacing: 0; }
-  .stat .copy { margin-left: auto; }
+  /* what the three numbers are, kept apart from the unit by a hairline rather
+     than by a dot, so it reads as a key and not as more of the value */
+  .stat__key {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    height: 1.3em;
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 2px solid var(--brand-line);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .02em;
+  }
+  /* The copy pill sits out of the flow, pinned to the corner, so opening it
+     grows over the card's empty right side and never squeezes the figures
+     into a second line. The body keeps the room the closed icon needs. */
+  .stat__body { padding-right: 36px; }
+  .stat .copy { position: absolute; top: 14px; right: 14px; }
+  .stat__value { flex-wrap: nowrap; white-space: nowrap; }
 
   .hero {
     display: flex;
@@ -571,7 +1395,32 @@
   .hero .figure { display: flex; align-items: baseline; gap: 9px; font-variant-numeric: tabular-nums; letter-spacing: -0.035em; }
   .hero .figure span:first-child { font-size: 58px; font-weight: 700; line-height: .92; }
   .hero .figure span:nth-child(2) { font-size: 19px; font-weight: 550; color: var(--muted); letter-spacing: 0; }
-  .hero .figure .copy { align-self: center; margin-left: 4px; }
+  .hero .figure { position: relative; padding-right: 38px; }
+  .hero .figure .copy { position: absolute; left: calc(100% - 30px); top: 50%; translate: 0 -50%; }
+  .hero .figure .copy:hover, .hero .figure .copy.is-done, .hero .figure .copy.is-fail { z-index: 2; }
+  .card { transition: background-color .22s ease, box-shadow .22s ease; }
+  .card .hero { transition: opacity .22s ease; }
+  .card.is-copied { background: var(--tint); box-shadow: 0 2px 6px -4px rgba(28, 33, 74, .18); }
+  .card.is-copied .hero { opacity: .82; }
+
+  .copied-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--ok-soft);
+    color: var(--ok);
+    font-size: 11.5px;
+    font-weight: 650;
+    opacity: 0;
+    transform: translateY(4px) scale(.94);
+    transition: opacity .18s var(--ease-out), transform .18s var(--ease-out);
+  }
+  .card.is-copied .copied-tag { opacity: 1; transform: none; }
+  .copied-tag svg { flex: none; }
+
   .hero .who { text-align: right; max-width: 46%; }
   .hero .who b { display: block; font-size: 22px; font-weight: 650; letter-spacing: -0.015em; }
   .hero .who span { font-family: var(--mono); font-size: 16px; color: var(--muted); word-break: break-all; }
@@ -591,16 +1440,67 @@
   dl.specs dd { margin: 0; font-size: 14.5px; font-weight: 550; text-align: right; }
   dl.specs dd.mono { font-family: var(--mono); font-size: 13.5px; font-weight: 500; word-break: break-all; }
 
-  .hint, .empty {
+  .empty {
     margin: 0;
     padding: 22px 24px;
     color: var(--muted);
     background: var(--card);
-    border: 1px dashed var(--brand-line);
-    border-radius: 20px;
+    border: 1px solid var(--brand-line);
+    border-left: 3px solid var(--brand);
+    border-radius: var(--r-card);
     font-size: 14px;
   }
-  .empty { border-style: solid; border-left: 3px solid var(--brand); }
+
+  /* ---------- nothing picked yet ---------- */
+
+  .blank {
+    display: grid;
+    justify-items: center;
+    gap: 22px;
+    padding: 52px 28px 56px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-bubble);
+    box-shadow: var(--lift);
+    text-align: center;
+  }
+
+  .blank__art {
+    display: grid;
+    place-items: center;
+    width: 176px;
+    height: 176px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 32%, #fff 0%, #f3edfd 54%, #e9defa 100%);
+    box-shadow: inset 0 0 0 1px rgba(111, 45, 217, .10), 0 20px 40px -30px rgba(28, 33, 74, .75);
+  }
+  .blank__art svg { display: block; width: 140px; height: auto; }
+  .blank__art .art-glass { animation: sweep 3.4s ease-in-out infinite; }
+  .blank__art .art-sparks { animation: breathe 2.2s ease-in-out infinite; transform-origin: 80px 60px; }
+  @keyframes sweep {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-30px, 22px); }
+  }
+  @keyframes breathe {
+    0%, 100% { opacity: .5; }
+    50% { opacity: 1; }
+  }
+
+  .blank p {
+    margin: 0;
+    max-width: 42ch;
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.55;
+    text-wrap: balance;
+  }
+
+  @keyframes blank-in {
+    from { opacity: 0; transform: translateY(10px) scale(.97); }
+    to { opacity: 1; transform: none; }
+  }
+  .blank__art { animation: blank-in .5s var(--ease-bubble) backwards 40ms; }
+  .blank p { animation: blank-in .5s var(--ease-bubble) backwards 130ms; }
 
   .reset {
     margin-top: 14px;
@@ -615,51 +1515,148 @@
   }
   .reset:hover { text-decoration: underline; text-underline-offset: 3px; }
 
+  /* An icon at rest. Under the pointer it grows into a pill that says what it
+     copies, and whatever sits beside it moves over, since the pill grows in
+     the flow. After a copy it stays open long enough to say "Copied". */
   .copy {
+    --copy-size: 30px;
     position: relative;
     flex: none;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
+    justify-content: flex-start;
+    width: var(--copy-size);
+    height: var(--copy-size);
     padding: 0;
+    overflow: hidden;
     background: none;
     border: 1px solid transparent;
-    border-radius: 9px;
+    border-radius: 999px;
     color: var(--muted);
     cursor: pointer;
+    transition: width .24s var(--ease-out), background .14s ease, border-color .14s ease,
+                color .14s ease, transform .1s var(--ease-out);
   }
-  .copy:hover { background: var(--tint); border-color: var(--line); color: var(--ink); }
   .copy:focus-visible { outline: none; color: var(--ink); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
   .copy.is-done { color: var(--ok); }
+  .copy:active { transform: scale(.92); }
+  .copy__box { position: relative; flex: none; width: calc(var(--copy-size) - 2px); height: calc(var(--copy-size) - 2px); }
+  .copy__label {
+    padding: 0 10px 0 1px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity .16s var(--ease-out), transform .16s var(--ease-out);
+  }
+  .copy.is-done, .copy.is-fail { width: var(--copy-w, 96px); background: var(--tint); border-color: var(--line); }
+  .copy.is-done .copy__label, .copy.is-fail .copy__label { opacity: 1; transform: none; transition-delay: .08s; }
+  @media (hover: hover) and (pointer: fine) {
+    .copy:hover { width: var(--copy-w, 96px); background: var(--tint); border-color: var(--line); color: var(--ink); }
+    .copy:hover .copy__label { opacity: 1; transform: none; transition-delay: .08s; }
+    .copy.is-done:hover { color: var(--ok); }
+  }
+
+  /* The weight buttons answer more briefly: the moment they are pressed the
+     pill draws back to a tick — the card or row beside it carries the rest of
+     the confirmation — and the tick gives way to the icon soon after. Held
+     shut under the pointer too, or the hover would reopen it at once. */
+  .copy--brief.is-done, .copy--brief.is-done:hover { width: var(--copy-size); background: none; border-color: transparent; }
+  .copy--brief.is-done .copy__label, .copy--brief.is-done:hover .copy__label { opacity: 0; transform: translateX(-4px); transition-delay: 0s; }
+
+  /* pressed many times a day, so the swap to the tick is a small crossfade
+     and nothing more */
+  .copy .copy__ic {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    transition: opacity .14s var(--ease-out), transform .14s var(--ease-out);
+  }
+  .copy .copy__done { opacity: 0; transform: scale(.7); }
+  .copy .copy__done path { stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset .28s var(--ease-out); }
+  .copy.is-done .copy__glyph { opacity: 0; transform: scale(.3); transition-duration: .16s; }
+  .copy.is-done .copy__done { opacity: 1; transform: none; transition-delay: .06s; }
+  .copy.is-done .copy__done path { stroke-dashoffset: 0; transition-delay: .1s; }
 
   /* ---------- calculator rows ---------- */
 
-  .lines { display: flex; flex-direction: column; gap: 8px; padding: 4px 6px 0; }
+  /* The 8px between rows is each row's own padding rather than a flex gap, so a
+     row folding away takes its share of the spacing with it instead of dropping
+     the last 8px in one step. The negative margin trims the gutter left hanging
+     off the final row. */
+  .lines { display: flex; flex-direction: column; padding: 4px 6px 0; margin-bottom: -8px; }
+  .line { padding-bottom: 8px; }
+
+  /* --row-h is measured by script, so a row folds over its own height instead of
+     some ceiling picked to be safely too high. The clip is only on while the
+     fold runs — a row that clipped all the time would cut off the product list
+     that drops out of it. */
+  .line.is-entering { overflow: hidden; animation: row-in .24s var(--ease-bubble); }
+  .line.is-leaving { overflow: hidden; animation: row-out .22s ease forwards; pointer-events: none; }
+
+  @keyframes row-in {
+    from { opacity: 0; max-height: 0; padding-bottom: 0; }
+    to { opacity: 1; max-height: var(--row-h, 140px); padding-bottom: 8px; }
+  }
+  @keyframes row-out {
+    from { opacity: 1; max-height: var(--row-h, 140px); padding-bottom: 8px; }
+    to { opacity: 0; max-height: 0; padding-bottom: 0; }
+  }
 
   .line, .line-head {
     display: grid;
-    grid-template-columns: 22px 1fr 140px 34px;
+    grid-template-columns: 22px 1fr 172px 34px;
     align-items: center;
     gap: 10px;
   }
   .line-head { padding: 6px 6px 0; color: var(--muted); font-size: 11.5px; font-weight: 600; }
 
   .line__n { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; text-align: right; }
-  .qty {
-    width: 100%;
+  /* our own stepper, so a click always lands somewhere predictable */
+  .line__qty { display: flex; align-items: center; gap: 5px; }
+
+  .qty-step {
+    display: grid;
+    place-items: center;
+    width: 32px;
     height: 42px;
-    padding: 0 8px 0 13px;
+    flex: none;
+    padding: 0;
     background: var(--tint);
     border: 1px solid transparent;
-    border-radius: 14px;
+    border-radius: 13px;
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .qty-step:hover { background: var(--tint-2); color: var(--ink); }
+  .qty-step:active { background: var(--tint-3); }
+  .qty-step:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+
+  .qty {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    height: 42px;
+    padding: 0 8px;
+    text-align: center;
+    background: var(--tint);
+    border: 1px solid transparent;
+    border-radius: var(--r-inner);
     color: var(--ink);
     font: inherit;
     font-size: 14.5px;
     font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+    appearance: textfield;
   }
-  .qty:hover { background: #eceef6; }
+  .qty::-webkit-outer-spin-button,
+  .qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .qty:hover { background: var(--tint-2); }
   .qty:focus { outline: none; background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
   .line.is-bad .qty, .line.is-bad .trigger { border-color: #d24b3c; background: #fef6f5; }
 
@@ -682,11 +1679,8 @@
 
   /* ---------- pallet block and table ---------- */
 
-  .wire { display: grid; gap: 14px; }
-  .wire__rows { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .wire__send { display: flex; justify-content: flex-end; }
-
   .send-btn {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 9px;
@@ -703,12 +1697,444 @@
   }
   .send-btn:hover { border-color: var(--brand-line); color: var(--brand-deep); }
   .send-btn:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
-  .send-btn.is-done { color: var(--ok); border-color: #b9e6d6; }
-  .send-btn span { display: inline-flex; align-items: center; }
+  .send-btn.is-fail { color: #9a3b2e; border-color: #f3cdc7; }
 
-  .detail-split { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); }
-  .detail-split > .pane { min-width: 0; padding-top: 4px; }
-  .detail-split > .stage { border-left: 1px solid var(--line-soft); }
+  /* The pill's shape never changes; what happens happens inside it. The words
+     fade and the icon slides to the middle; there it becomes a tick; "Copied"
+     comes up beside it and the tick moves over so the pair sits centred; then
+     both leave to the left as the original returns from the right. Strictly
+     one thing at a time: each hand-off is a fixed delay on the next step. */
+  .send-btn__layer { display: flex; align-items: center; gap: 9px; }
+  .send-btn__done {
+    position: absolute;
+    inset: 0;
+    justify-content: center;
+    opacity: 0;
+    color: var(--ok);
+    pointer-events: none;
+    transition: opacity .2s var(--ease-out), transform .26s var(--ease-out);
+  }
+  .send-btn__ic { display: inline-flex; align-items: center; }
+  .send-btn__ic, .send-btn__words { transition: opacity .2s var(--ease-out), transform .26s var(--ease-out); }
+  .send-btn__done .send-btn__ic { opacity: 0; transform: scale(.6); }
+  .send-btn__done .send-btn__words { opacity: 0; transform: translateX(6px); }
+
+  .send-btn.is-copying .send-btn__rest .send-btn__words { opacity: 0; transition-duration: .16s; }
+  .send-btn.is-copying .send-btn__rest .send-btn__ic { transform: translateX(var(--mid, 0)); transition-delay: .17s; }
+
+  .send-btn.is-ticked .send-btn__rest .send-btn__ic {
+    opacity: 0;
+    transform: translateX(var(--mid, 0)) scale(.6);
+    transition: opacity .14s var(--ease-out), transform .14s var(--ease-out);
+  }
+  .send-btn.is-ticked .send-btn__done { opacity: 1; transform: translateX(var(--half, 0)); transition-delay: .15s; }
+  .send-btn.is-ticked .send-btn__done .send-btn__ic { opacity: 1; transform: none; transition-delay: .15s; }
+
+  .send-btn.is-labelled .send-btn__done { transform: none; transition-delay: 0s; }
+  .send-btn.is-labelled .send-btn__done .send-btn__words { opacity: 1; transform: none; }
+
+  .send-btn.is-leaving .send-btn__done { opacity: 0; transform: translateX(-32px); }
+  .send-btn.is-leaving .send-btn__rest { animation: from-right .3s var(--ease-out) 80ms backwards; }
+  .send-btn.is-leaving .send-btn__rest .send-btn__ic,
+  .send-btn.is-leaving .send-btn__rest .send-btn__words { transition: none; }
+  @keyframes from-right {
+    from { opacity: 0; transform: translateX(32px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ---------- unit converter ---------- */
+
+  /* A card that drops from the bar, anchored to its button: three pill tabs
+     with a sliding marker, a value with a unit on each side, and results
+     that copy. One width for every tab, wide enough for a carton's three
+     sides on one line. */
+  .conv {
+    position: absolute;
+    z-index: 40;
+    right: 0;
+    top: calc(100% + 10px);
+    width: 428px;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: var(--lift-high);
+    color: var(--ink);
+    transform-origin: top right;
+  }
+  .conv[hidden] { display: none; }
+  /* a popover, so it scales in from its button rather than unfolding */
+  .conv.is-mounted { animation: pop-in .18s var(--ease-out); }
+  .conv.is-out { animation: pop-out .14s ease forwards; pointer-events: none; }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(-4px) scale(.96); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pop-out {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(-4px) scale(.97); }
+  }
+
+  .conv__title { margin: 2px 0 12px 4px; font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
+  html[data-theme="dark"] .conv { border-color: #4d4368; box-shadow: 0 0 0 1px rgba(255, 255, 255, .05), var(--lift-high); }
+  html[data-theme="dark"] .share__tip { border-color: #4d4368; }
+
+  .conv__tabs {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 4px;
+    margin-bottom: 14px;
+    background: var(--tint);
+    border-radius: 999px;
+  }
+  .conv__thumb {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc((100% - 8px) / 3);
+    height: calc(100% - 8px);
+    background: var(--ink);
+    border-radius: 999px;
+    transition: transform .34s cubic-bezier(.34, 1.26, .5, 1);
+  }
+  .conv__tab {
+    position: relative;
+    z-index: 1;
+    padding: 8px 6px;
+    background: none;
+    border: 0;
+    border-radius: 999px;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color .24s ease;
+  }
+  .conv__tab.is-on { color: var(--card); }
+  .conv__tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .conv__pane[hidden] { display: none; }
+  .conv__row { display: grid; grid-template-columns: minmax(0, 1fr) 92px 24px 92px; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .conv__row--dims { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .conv__row--units { grid-template-columns: 1fr 24px 1fr; }
+  .conv__label { margin: 12px 0 6px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+  .conv__label:first-child { margin-top: 0; }
+  .conv input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    background: var(--tint);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .conv input::-webkit-outer-spin-button, .conv input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .conv input::placeholder { color: var(--muted); }
+  .conv input:focus { outline: none; background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .conv__arrow { display: grid; place-items: center; color: var(--muted); }
+
+  /* the unit menus, in the page's own dress rather than the platform's */
+  .upick { position: relative; }
+  .upick__btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    height: 40px;
+    padding: 0 10px 0 12px;
+    background: var(--tint);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+  .upick__btn:hover { background: var(--tint-2); }
+  .upick__btn:focus-visible, .upick__btn[aria-expanded="true"] { outline: none; background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .upick__btn svg { flex: none; color: var(--muted); transition: transform .15s ease; }
+  .upick__btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .upick__menu {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    padding: 5px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--lift-high);
+    transform-origin: top center;
+  }
+  .upick__menu[hidden] { display: none; }
+  .upick__menu.is-mounted { animation: pop-in .16s var(--ease-out); }
+  .upick__opt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 10px;
+    background: none;
+    border: 0;
+    border-radius: 9px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+  }
+  .upick__opt:hover, .upick__opt:focus { background: var(--tint); outline: none; }
+  .upick__opt.is-on { color: var(--brand-deep); font-weight: 700; }
+  .upick__opt .tick { color: var(--brand); }
+
+  .conv__go {
+    width: 100%;
+    margin-top: 6px;
+    padding: 11px 14px;
+    background: var(--brand);
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .18s ease, transform .12s var(--ease-out);
+  }
+  .conv__go:hover { background: var(--brand-deep); }
+  .conv__go:active { transform: scale(.98); }
+  .conv__go:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--brand-soft); }
+
+  /* a result: what was entered, small, over what it became, large; the copy
+     button anchored by its left edge so it opens out past the card and never
+     over the figure */
+  .conv__out { display: grid; gap: 6px; margin-top: 12px; }
+  .conv__out:empty { display: none; }
+  /* one bubble per figure: its name up top with the copy button in the
+     corner; below, what was entered on the left, the arrow, and what it
+     became on the right — bold and larger, so the answer is the answer */
+  .conv__result {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    padding: 10px 14px 11px;
+    background: var(--tint);
+    border-radius: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .conv__result .name { padding-right: 36px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+  /* space-between puts the mark exactly midway between where the entered
+     figure ends and the answer begins */
+  .conv__result .line { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .conv__result .from { color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .conv__result .arrow { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--brand-soft); color: var(--brand); }
+  .conv__result .to { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+  .conv__result .to b { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  .conv__result .to small { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  .conv__result .copy { position: absolute; right: 8px; top: 8px; }
+  .conv__result .copy:hover, .conv__result .copy.is-done { z-index: 2; }
+
+  @media (max-width: 940px) {
+    .conv { right: -10px; width: min(428px, calc(100vw - 20px)); }
+  }
+
+  /* ---------- calculator layout ---------- */
+
+  /* Two columns, as on a dispatch board: the order and the load on the left,
+     the answer on the right, where it stays in view while the left scrolls. */
+  .calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(400px, .96fr); gap: 16px; align-items: start; }
+  .calc__main { display: grid; gap: 16px; min-width: 0; }
+  .calc__main > .foot-note { margin-top: -4px; }
+  .calc__main > #out:empty, .calc__stage:empty { display: none; }
+  .calc__stage { display: grid; gap: 16px; }
+  .calc__side { position: sticky; top: 0; display: grid; gap: 16px; min-width: 0; }
+
+  .side-hero {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 18px;
+    padding: 26px 26px 24px;
+  }
+  .side-hero__title {
+    margin: 0 0 2px;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+  }
+  .side-hero__copy { margin: 0; max-width: 34ch; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+  .side-hero__title--marked { display: flex; align-items: center; gap: 10px; }
+  .side-hero__mark { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--brand-soft); }
+  .side-hero__mark svg { width: 24px; height: auto; }
+  .side-hero__mark .art-arrow { animation: settle 2.6s ease-in-out infinite; }
+
+  /* The load, model by model, as one bar. Each share holds its percent when
+     it has room; the model names hang beneath, tilted, each from the middle
+     of its share — so a sliver of a share is still named, and many shares
+     still read. The rest waits in the hover card. */
+  .share { position: relative; margin: -6px 0 2px; }
+  .share__bar { display: flex; gap: 3px; height: 22px; border-radius: 999px; overflow: hidden; }
+  .share__seg {
+    flex: 1 1 0;
+    min-width: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    container-type: inline-size;
+    transition: filter .16s ease;
+    cursor: default;
+  }
+  @media (hover: hover) and (pointer: fine) { .share__seg:hover { filter: brightness(1.08); } }
+  .share__pct { font-size: 11px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; }
+  @container (max-width: 34px) { .share__pct { display: none; } }
+  .share__names { position: relative; height: 58px; margin-top: 4px; }
+  .share__name {
+    position: absolute;
+    top: 0;
+    padding-left: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    transform-origin: 0 0;
+    transform: rotate(38deg);
+    cursor: default;
+  }
+  /* a short tick from the bar down to where the name starts */
+  .share__name::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: .55em;
+    width: 7px;
+    height: 1.5px;
+    background: currentColor;
+    opacity: .6;
+  }
+  .share__dot { flex: none; align-self: center; width: 8px; height: 8px; border-radius: 50%; }
+  .share__tip {
+    position: absolute;
+    z-index: 5;
+    bottom: calc(100% + 8px);
+    left: 0;
+    width: 196px;
+    padding: 10px 12px 11px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--lift-high);
+    opacity: 0;
+    transform: translateY(6px) scale(.97);
+    transform-origin: bottom center;
+    transition: opacity .16s var(--ease-out), transform .16s var(--ease-out);
+    pointer-events: none;
+  }
+  .share__tip[hidden] { display: none; }
+  .share__tip.is-in { opacity: 1; transform: none; }
+  .share__tip-head { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .01em; }
+  .share__tip-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; }
+  .share__tip-grid span { color: var(--muted); }
+  .share__tip-grid b { text-align: right; font-variant-numeric: tabular-nums; }
+  /* the empty state: an empty pallet, the arrow settling onto it, and the
+     words centred beneath */
+  .side-hero.is-idle { justify-items: center; gap: 10px; padding: 34px 26px 32px; text-align: center; }
+  .side-hero.is-idle .side-hero__title { font-size: 26px; }
+  .side-hero.is-idle .side-hero__copy { max-width: 30ch; text-wrap: balance; }
+  .side-hero__art { width: 170px; margin-bottom: 6px; }
+  .side-hero__art svg { display: block; width: 100%; height: auto; }
+  .side-hero__art .art-arrow { animation: settle 2.6s ease-in-out infinite; }
+  @keyframes settle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+  .side-hero__row { position: relative; display: flex; align-items: center; gap: 14px; padding-right: 36px; }
+  .side-hero__row .copy { position: absolute; right: 0; top: 50%; translate: 0 -50%; }
+  .side-hero__body { flex: 1 1 auto; min-width: 0; }
+  .side-hero__value {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .side-hero__value small { font-size: 14px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+  .side-hero__cta { margin-top: 2px; }
+  .side-hero__cta .send-btn { width: 100%; justify-content: center; padding: 13px 18px; background: var(--ink); border-color: var(--ink); color: var(--card); box-shadow: none; }
+  .side-hero__cta .send-btn:hover { background: var(--ink-soft); border-color: var(--ink-soft); color: var(--card); }
+  .side-hero__cta .send-btn .send-btn__done { color: #7ee2b8; }
+
+  .side-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* the loading bay: the one dark surface, where the load is shown */
+  .bay {
+    position: relative;
+    padding: 18px 20px 14px;
+    border-radius: var(--r-bubble);
+    background:
+      radial-gradient(700px 360px at 80% 0%, rgba(140, 70, 230, .45), transparent 65%),
+      linear-gradient(170deg, #241447 0%, #170c31 100%);
+    color: #fff;
+    box-shadow: 0 28px 60px -34px rgba(20, 8, 50, .9);
+    overflow: hidden;
+  }
+  .bay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, .05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: linear-gradient(to bottom, #000, transparent 90%);
+    mask-image: linear-gradient(to bottom, #000, transparent 90%);
+    pointer-events: none;
+  }
+  .bay__head { position: relative; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  /* the two figures that matter, pinned to the corner of the bay in one plate */
+  .bay__plate {
+    display: grid;
+    gap: 1px;
+    padding: 7px 12px 8px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .08);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .bay__line { display: flex; align-items: baseline; gap: 10px; }
+  .bay__key { min-width: 76px; color: rgba(255, 255, 255, .62); font-family: var(--mono); font-size: 11px; }
+  .bay__line b { font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .bay .stage { position: relative; padding: 6px 0 0; }
+  .bay .stage figcaption { color: rgba(255, 255, 255, .62); }
+  .bay .stage figcaption .stage__dims { color: #fff; }
+
+  @media (max-width: 1020px) {
+    /* one column: the answer moves up to sit right under the form, ahead of
+       the bay — the main column dissolves so its parts can be reordered */
+    .calc { display: flex; flex-direction: column; align-items: stretch; }
+    .calc__main { display: contents; }
+    .calc__side { position: static; order: 4; }
+    .calc__stage { order: 5; }
+  }
 
   .stage { display: flex; flex-direction: column; justify-content: center; padding: 12px 16px 16px; }
   .stage svg {
@@ -721,7 +2147,7 @@
     user-select: none;
   }
   .stage svg.is-turning { cursor: grabbing; }
-  .stage figcaption { margin-top: 8px; color: var(--muted); font-size: 12.5px; text-align: center; }
+  .stage figcaption { margin-top: 8px; color: var(--muted); font-size: 12.5px; font-weight: 700; text-align: center; }
   .stage figcaption .stage__dims {
     display: block;
     margin-top: 2px;
@@ -730,17 +2156,26 @@
     font-weight: 650;
   }
 
-  table.breakdown { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.breakdown { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.breakdown th, table.breakdown td {
-    padding: 10px 8px;
+    padding: 10px 6px;
     text-align: right;
     border-bottom: 1px solid var(--line-soft);
   }
   table.breakdown th { color: var(--muted); font-size: 11.5px; font-weight: 600; }
-  table.breakdown th:first-child, table.breakdown td:first-child { padding-left: 22px; text-align: left; }
-  table.breakdown th:last-child, table.breakdown td:last-child { padding-right: 20px; }
+  table.breakdown th:first-child, table.breakdown td:first-child { padding-left: 18px; text-align: left; }
+  table.breakdown th:last-child, table.breakdown td:last-child { padding-right: 16px; }
   table.breakdown td { font-variant-numeric: tabular-nums; }
   table.breakdown td.id { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  /* In the table the pill is anchored by its left edge and opens to the right,
+     into the quiet space at the start of the next column, so the figure it
+     belongs to never moves. */
+  table.breakdown .with-copy { position: relative; display: flex; align-items: center; justify-content: flex-end; padding-right: 26px; }
+  table.breakdown .copy { --copy-size: 24px; position: absolute; left: calc(100% - 24px); top: 50%; translate: 0 -50%; opacity: .35; }
+  table.breakdown .copy:hover, table.breakdown .copy.is-done, table.breakdown .copy.is-fail { z-index: 2; }
+  table.breakdown tbody tr:hover .copy { opacity: .75; }
+  table.breakdown .copy:hover, table.breakdown .copy:focus-visible, table.breakdown .copy.is-done { opacity: 1; }
+  table.breakdown tbody tr:hover { background: var(--tint); }
   table.breakdown tr:last-child td { border-bottom: 0; }
   table.breakdown tfoot td { font-weight: 650; border-top: 1px solid var(--line); }
 
@@ -750,43 +2185,98 @@
     background: #fef6f5;
     border: 1px solid #f3cdc7;
     border-left: 3px solid #d24b3c;
-    border-radius: 16px;
+    border-radius: 18px;
     color: #7f2b20;
     font-size: 14px;
   }
 
+  /* Every button gives a little on a press: it swells while held and pops once
+     on the click, so even the quickest tap shows it registered. The pop lives
+     on a class set by script; :active alone would be over before a fast click
+     had time to show. */
+  .icon-btn, .trigger, .segmented__opt, .sorter__btn, .qty-step, .send-btn, .line__rm, .pick__drop, .reset, .topbar__link {
+    transition-property: background-color, border-color, color, box-shadow, width, transform, translate, scale;
+    transition-duration: .18s, .18s, .18s, .18s, .28s, .12s, .2s, .2s;
+    transition-timing-function: ease, ease, ease, ease, var(--ease-out), var(--ease-out), var(--ease-out), var(--ease-out);
+  }
+  .icon-btn:active, .trigger:active, .segmented__opt:active, .sorter__btn:active,
+  .send-btn:active, .line__rm:active, .pick__drop:active { transform: scale(1.05); }
+  /* the steppers are the exception: they give under the finger */
+  .qty-step:active { transform: scale(.9); }
+
+  /* Under a fine pointer a pill grows a little and leans a hair toward the
+     cursor — a uniform scale plus a couple of pixels of travel, so the pill
+     stays a pill. Circular buttons sit this out. The lean is written by
+     script from where the pointer is over the button. */
+  @media (hover: hover) and (pointer: fine) {
+    .trigger:hover, .sorter__btn:hover, .topbar__link:hover {
+      translate: var(--lean-x, 0) var(--lean-y, 0);
+      scale: 1.03;
+    }
+    .send-btn:hover { translate: var(--lean-x, 0) var(--lean-y, 0); scale: 1.05; }
+    .segmented__opt:hover { scale: 1.04; }
+    .qty-step:hover { scale: 1.08; }
+    /* list rows grow evenly, text and all, and stay inside their list: the
+       menus keep enough padding to absorb the growth */
+    .row:hover { scale: 1.02; z-index: 1; }
+  }
+  .is-popping { animation: pop .22s var(--ease-out); }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
     * { transition: none !important; }
-    .icon-btn--send.is-sent::before { animation: none; }
     .pick.is-editing::before { animation: none; }
-    .page-head h1, .page-head .lead,
-    .workspace > div > :nth-child(2), .workspace .foot-note { animation: none; }
+    .compact__group { transition: none; }
+    .toast { transition: opacity .18s ease; transform: none; }
+    .is-ready .topbar__logo, .is-ready .topbar__nav,
+    .is-ready .page-head h1, .is-ready .page-head .lead,
+    .is-ready .workspace > div > :nth-child(2), .is-ready .workspace .foot-note,
+    .is-ready .result { animation: fade-only .25s ease backwards; }
+    .panel.is-mounted, .panel.is-out { animation: none; }
+    .blank__art, .blank p { animation: none; }
+    .flyout .card { opacity: 1; transform: none; }
+    .line.is-entering, .line.is-leaving { animation: none; }
+    .bg__blob, .bg__grid, .side-hero__art .art-arrow, .blank__art .art-glass, .blank__art .art-sparks { animation: none; }
+    /* the fades stay — they still tell you what is new — the movement goes */
+    .reveal { transform: none; }
+    .reveal.is-in { transition: opacity .2s ease !important; }
+    .icon-btn--send .send__ic, .copy .copy__ic, .copied-tag { transform: none !important; transition: opacity .15s ease !important; }
+    .icon-btn--send.is-ringing::before { animation: none; }
+    .card-slot > .card { animation: none; }
+    .card-slot.is-pressed { animation: none; }
+    .is-popping, .row.is-picked, .row.is-picked .row__tick { animation: none; }
+    .pick.is-editing { animation: none; }
+    .icon-btn:active, .trigger:active, .segmented__opt:active, .sorter__btn:active,
+    .qty-step:active, .send-btn:active, .line__rm:active, .pick__drop:active { transform: none; }
+    .icon-btn--clear .morph line { transition: none; }
+    .icon-btn--clear, .btn-word { transition: opacity .18s ease !important; }
+    .trigger:hover, .sorter__btn:hover, .topbar__link:hover, .send-btn:hover,
+    .segmented__opt:hover, .qty-step:hover, .row:hover { translate: none; scale: none; }
+    .send-btn.is-leaving .send-btn__rest { animation: fade-only .2s ease; }
+    .send-btn__ic, .send-btn__words, .send-btn__done { transition: opacity .2s ease !important; transform: none !important; }
+    .crow.is-pressed { animation: press-row-still .26s ease; }
+  }
+  /* the pressed row still flashes, it just does not move */
+  @keyframes press-row-still {
+    0%, 100% { background-color: transparent; }
+    40% { background-color: var(--brand-soft); }
   }
 
   /* ---------- narrow screens ---------- */
 
   @media (max-width: 940px) {
-    .app { flex-direction: column; }
-    .rail {
-      position: static;
-      width: auto;
-      height: auto;
-      flex-direction: row;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 12px 16px;
-    }
-    .rail__brand { padding: 0 12px 0 0; }
-    .rail__brand--logo { padding: 0 12px 0 0; }
-    .rail__logo { width: 148px; padding: 7px 10px; border-radius: 12px; }
-    .rail__brand div { white-space: nowrap; }
-    .rail__nav { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; gap: 6px; }
-    .rail__link { white-space: nowrap; padding: 9px 12px; font-size: 13.5px; }
-    .workspace { padding: 22px 18px 60px; }
-    .detail-split { grid-template-columns: 1fr; }
-    .detail-split > .stage { border-left: 0; border-top: 1px solid var(--line-soft); }
-    .wire__rows { grid-template-columns: 1fr; }
+    .app { padding: 10px 10px 0; gap: 10px; }
+    .topbar { min-height: 58px; padding: 8px 10px; border-radius: 18px; flex-wrap: wrap; }
+    .topbar__logo { width: 112px; }
+    /* the pages drop to a second row; the logo and the two tools hold the first */
+    .topbar__nav { order: 5; flex: 1 1 100%; margin-left: 0; }
+    .topbar__link { padding: 8px 12px; font-size: 13px; }
+    .workspace { padding: 60px 18px 64px; }
   }
 
   @media (max-width: 620px) {
@@ -805,19 +2295,26 @@
     .thumb { width: 64px; height: 64px; border-radius: 13px; }
     .hero .who { text-align: left; max-width: 100%; }
     .hero .figure span:first-child { font-size: 48px; }
-    .workspace { padding: 18px 14px 50px; }
+    .workspace { padding: 60px 14px 64px; }
   }
 </style>
 </head>
 <body>
 <div class="app">
 
-  <aside class="rail">
-    <div class="rail__brand{% if logo %} rail__brand--logo{% endif %}">
-      {% if logo %}
-      <span class="rail__logo"><img src="{{ logo }}" alt="BV"></span>
-      {% else %}
-      <span class="rail__mark">
+  <div class="bg" aria-hidden="true">
+    <span class="bg__grid"></span>
+    <span class="bg__magnet"><span class="bg__blob bg__blob--a"></span></span>
+    <span class="bg__blob bg__blob--b"></span>
+    <span class="bg__blob bg__blob--c"></span>
+  </div>
+
+  <header class="topbar">
+    {% if logo %}
+    <a class="topbar__logo" href="https://bvsecurity.com" target="_blank" rel="noopener" aria-label="BV Security"><img src="{{ logo }}" alt="BV"></a>
+    {% else %}
+    <div class="topbar__mark">
+      <span>
         <svg width="19" height="19" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <rect x="2" y="4.5" width="16" height="5" rx="1.4" stroke="currentColor" stroke-width="1.5"/>
           <rect x="2" y="10.5" width="16" height="5" rx="1.4" stroke="currentColor" stroke-width="1.5"/>
@@ -825,23 +2322,20 @@
           <circle cx="14.6" cy="13" r="1" fill="currentColor"/>
         </svg>
       </span>
-      <div>
-        <b>Warehouse Tools</b>
-        <span>Hard drives &amp; pallets</span>
-      </div>
-      {% endif %}
+      <b>Warehouse Tools</b>
     </div>
+    {% endif %}
 
-    <nav class="rail__nav">
-      <a class="rail__link{% if page_id == 'lookup' %} is-active{% endif %}" href="{{ links.home }}">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <nav class="topbar__nav">
+      <a class="topbar__link{% if page_id == 'lookup' %} is-active{% endif %}" href="{{ links.home }}">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <circle cx="9" cy="9" r="5.6" stroke="currentColor" stroke-width="1.7"/>
           <path d="M13.2 13.2 17 17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
         </svg>
         Hard Drive Searcher
       </a>
-      <a class="rail__link{% if page_id == 'calculator' %} is-active{% endif %}" href="{{ links.calculator }}">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <a class="topbar__link{% if page_id == 'calculator' %} is-active{% endif %}" href="{{ links.calculator }}">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <path d="M10 2.4 17.2 6 10 9.6 2.8 6 10 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
           <path d="M2.8 10 10 13.6 17.2 10" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
           <path d="M2.8 14 10 17.6 17.2 14" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
@@ -849,7 +2343,28 @@
         Pallet Dimensions Calculator
       </a>
     </nav>
-  </aside>
+
+    <div class="tool" id="tool">
+      <button class="icon-btn tool__btn" type="button" id="convToggle" aria-haspopup="dialog" aria-expanded="false" aria-label="Unit converter">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3.5 6.5h11l-3-3M16.5 13.5h-11l3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <button class="theme" type="button" id="themeToggle" aria-label="Switch to dark mode" aria-pressed="false">
+      <span class="theme__track">
+        <span class="theme__knob">
+          <svg class="theme__sun" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <svg class="theme__moon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M13.2 10.1A5.6 5.6 0 0 1 5.9 2.8a5.6 5.6 0 1 0 7.3 7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </span>
+    </button>
+  </header>
 
   <main class="workspace">
     <div class="{% block shell_class %}workspace__inner{% endblock %}">
@@ -872,7 +2387,9 @@
   const PALLET = {{ pallet | tojson }};
   const PRODUCTS = CATALOG.flatMap(g => g.products);
 
-  const wide = () => window.matchMedia('(min-width: 720px)').matches;
+  /* the width at which a sub-list stops being an indented block and starts
+     floating beside its row — the same line the stylesheet switches on */
+  const wide = () => window.matchMedia('(min-width: 900px)').matches;
 
   function el(tag, cls, text) {
     const node = document.createElement(tag);
@@ -929,28 +2446,494 @@
     }
   }
 
-  function copyButton(label, value) {
-    const button = el('button', 'copy tip');
+  function copyButton(label, value, onCopy, word) {
+    const button = el('button', 'copy');
     button.type = 'button';
-    button.innerHTML = ICON_COPY;
-    button.dataset.tip = 'Copy ' + label;
+    // both glyphs are always present; a class decides which one shows
+    button.innerHTML = '<span class="copy__box">'
+                     + '<span class="copy__ic copy__glyph">' + ICON_COPY + '</span>'
+                     + '<span class="copy__ic copy__done">' + ICON_DONE + '</span></span>';
+    const text = el('span', 'copy__label', word || ('Copy ' + label));
+    button.appendChild(text);
     button.setAttribute('aria-label', 'Copy ' + label);
+
+    // the pill's open width is whatever the label needs, measured when it is
+    // about to be seen — the label changes after a copy, and so does the font
+    function fit() {
+      button.style.setProperty('--copy-w', (button.offsetHeight + text.scrollWidth) + 'px');
+    }
+    button.addEventListener('pointerenter', fit);
+    button.addEventListener('focus', fit);
+
+    function settle(ok) {
+      text.textContent = ok ? 'Copied' : 'Copy failed — select it by hand';
+      fit();
+      button.classList.add(ok ? 'is-done' : 'is-fail');
+      clearTimeout(button._revert);
+      const hold = button.classList.contains('copy--brief') ? 900 : 1600;
+      button._revert = setTimeout(() => {
+        button.classList.remove('is-done', 'is-fail');
+        // give the width transition its moment before the words change back
+        setTimeout(() => { text.textContent = word || ('Copy ' + label); fit(); }, 240);
+      }, hold);
+    }
 
     button.addEventListener('click', async () => {
       const ok = await writeClipboard(value);
-      button.innerHTML = ok ? ICON_DONE : ICON_COPY;
-      button.dataset.tip = ok ? 'Copied' : 'Copy failed — select it by hand';
-      button.classList.add(ok ? 'is-done' : 'is-fail');
-      clearTimeout(button._revert);
-      button._revert = setTimeout(() => {
-        button.innerHTML = ICON_COPY;
-        button.dataset.tip = 'Copy ' + label;
-        button.classList.remove('is-done', 'is-fail');
-      }, 1600);
+      if (ok && onCopy) onCopy();
+      settle(ok);
+    });
+
+    // for a button built to stand in for one that was just pressed, when the
+    // list it sat in has been redrawn underneath the press
+    button.showDone = () => settle(true);
+
+    return button;
+  }
+
+  /* Results that were just produced rise into place in one staggered run, all
+     of them, so the list is whole from the moment it lands. The beat is capped:
+     the twentieth row should not be waiting on the first nineteen. */
+  function reveal(nodes) {
+    const list = Array.from(nodes);
+    if (!list.length) return;
+    list.forEach(node => node.classList.add('reveal'));
+    void list[0].offsetWidth;     // settle the hidden state, or there is nothing to transition from
+    list.forEach((node, i) => {
+      node.style.setProperty('--stagger', Math.min(i, 8) * 40 + 'ms');
+      node.classList.add('is-in');
+    });
+  }
+
+  /* One-shot press feedback on a freshly drawn element; the class leaves when
+     the animation does, so the next press can play it again. */
+  function press(node) {
+    requestAnimationFrame(() => {
+      node.classList.add('is-pressed');
+      node.addEventListener('animationend', () => node.classList.remove('is-pressed'), { once: true });
+    });
+  }
+
+  /* Every button pops once when clicked, rewound first so a quick second click
+     plays it again. */
+  const POPS = '.icon-btn, .trigger, .segmented__opt, .sorter__btn, .send-btn, .line__rm, .pick__drop';
+  document.addEventListener('click', e => {
+    const button = e.target.closest && e.target.closest(POPS);
+    if (!button) return;
+    button.classList.remove('is-popping');
+    void button.offsetWidth;
+    button.classList.add('is-popping');
+    button.addEventListener('animationend', () => button.classList.remove('is-popping'), { once: true });
+  });
+
+  /* Where the pointer sits over a pill decides which way it leans: a couple of
+     pixels toward the cursor, more on the big copy pill. Fine pointers only —
+     a finger has nowhere to hover from. */
+  const LEANS = '.trigger, .sorter__btn, .send-btn, .topbar__link';
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.addEventListener('pointermove', e => {
+      const pill = e.target.closest && e.target.closest(LEANS);
+      if (!pill) return;
+      const box = pill.getBoundingClientRect();
+      const reach = pill.classList.contains('send-btn') ? 4 : 2;
+      const x = ((e.clientX - box.left) / box.width - .5) * 2 * reach;
+      const y = ((e.clientY - box.top) / box.height - .5) * 2 * reach;
+      pill.style.setProperty('--lean-x', x.toFixed(2) + 'px');
+      pill.style.setProperty('--lean-y', y.toFixed(2) + 'px');
+    });
+    document.addEventListener('pointerout', e => {
+      const pill = e.target.closest && e.target.closest(LEANS);
+      if (!pill || pill.contains(e.relatedTarget)) return;
+      pill.style.removeProperty('--lean-x');
+      pill.style.removeProperty('--lean-y');
+    });
+  }
+
+  /* The clear button: a cross that folds into a tick and widens to say what
+     it did, then draws back. The width it needs is measured from the word the
+     first time, since the font decides it. */
+  const ICON_MORPH = '<svg class="morph" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
+    + '<line class="morph__a" x1="4.6" y1="4.6" x2="13.4" y2="13.4"/>'
+    + '<line class="morph__b" x1="13.4" y1="4.6" x2="4.6" y2="13.4"/></svg>';
+
+  /* Gives a round button a word to open into. Returns a setter, since some
+     buttons change what they are for — the plus that becomes a close. */
+  function wordy(button, word) {
+    button.classList.add('icon-btn--wordy');
+    button.classList.remove('tip');           // the word replaces the tooltip
+    delete button.dataset.tip;
+    const span = el('span', 'btn-word', word);
+    button.appendChild(span);
+    const fit = () => button.style.setProperty('--word-w', (38 + span.scrollWidth) + 'px');
+    button.addEventListener('pointerenter', fit);
+    button.addEventListener('focus', fit);
+    return text => { span.textContent = text; fit(); };
+  }
+
+  function clearControl(tip, word, onClick) {
+    const button = el('button', 'icon-btn icon-btn--quiet icon-btn--clear');
+    button.type = 'button';
+    button.innerHTML = ICON_MORPH;
+    button.setAttribute('aria-label', tip);
+    const setWord = wordy(button, tip);
+
+    button.addEventListener('click', () => {
+      onClick();
+      setWord(word);
+      button.classList.add('is-done');
+      clearTimeout(button._back);
+      button._back = setTimeout(() => {
+        button.classList.remove('is-done');
+        setTimeout(() => setWord(tip), 300);
+      }, 1500);
     });
 
     return button;
   }
+
+  /* The edge fade must stop short of the scrollbar, whose width depends on the
+     platform and its settings — measured, not assumed. */
+  const workspace = document.querySelector('.workspace');
+  function measureGutter() {
+    workspace.style.setProperty('--sbw', (workspace.offsetWidth - workspace.clientWidth) + 'px');
+  }
+  measureGutter();
+  window.addEventListener('resize', measureGutter);
+
+  /* ---------- unit converter ---------- */
+
+  const UNITS = {
+    weight: { base: 'kg', list: [['kg', 'kg', 1], ['g', 'g', .001], ['lb', 'lb', .45359237], ['oz', 'oz', .028349523]] },
+    length: { base: 'm', list: [['mm', 'mm', .001], ['cm', 'cm', .01], ['m', 'm', 1], ['in', 'in', .0254], ['ft', 'ft', .3048]] }
+  };
+  const factor = (kind, unit) => UNITS[kind].list.find(u => u[0] === unit)[2];
+  const convert = (kind, value, from, to) => value * factor(kind, from) / factor(kind, to);
+  /* enough digits to be useful, none that are noise */
+  function fmt(n) {
+    const abs = Math.abs(n);
+    const places = abs >= 1000 ? 0 : abs >= 100 ? 1 : abs >= 1 ? 2 : 3;
+    return String(parseFloat(n.toFixed(places)));
+  }
+
+  /* A unit menu of our own: a pill that opens a short list beneath it. Arrow
+     keys move, Enter picks, Escape or a click elsewhere closes. */
+  function unitPicker(kind, chosen) {
+    const root = el('div', 'upick');
+    const btn = el('button', 'upick__btn');
+    btn.type = 'button';
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-expanded', 'false');
+    const label = el('span', null, chosen);
+    btn.appendChild(label);
+    btn.appendChild(svgIcon('chev', '14', CHEVRON));
+    root.appendChild(btn);
+
+    const menu = el('div', 'upick__menu');
+    menu.hidden = true;
+    menu.setAttribute('role', 'listbox');
+    root.appendChild(menu);
+    let value = chosen;
+
+    function render() {
+      menu.innerHTML = '';
+      UNITS[kind].list.forEach(([key, name]) => {
+        const opt = el('button', 'upick__opt' + (key === value ? ' is-on' : ''));
+        opt.type = 'button';
+        opt.setAttribute('role', 'option');
+        opt.setAttribute('aria-selected', String(key === value));
+        opt.appendChild(el('span', null, name));
+        if (key === value) { const t = el('span', 'tick'); t.innerHTML = ICON_DONE; opt.appendChild(t); }
+        opt.addEventListener('click', e => { e.stopPropagation(); set(key); close(); btn.focus(); });
+        menu.appendChild(opt);
+      });
+    }
+    function set(key) { value = key; label.textContent = key; }
+    function open() {
+      render();
+      menu.hidden = false;
+      menu.classList.remove('is-mounted');
+      void menu.offsetWidth;
+      menu.classList.add('is-mounted');
+      btn.setAttribute('aria-expanded', 'true');
+      const on = menu.querySelector('.is-on') || menu.firstChild;
+      if (on) on.focus();
+    }
+    function close() { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+
+    btn.addEventListener('click', e => { e.stopPropagation(); menu.hidden ? open() : close(); });
+    root.addEventListener('keydown', e => {
+      if (menu.hidden) return;
+      const opts = [...menu.querySelectorAll('.upick__opt')];
+      const at = opts.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { opts[(at + 1) % opts.length].focus(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { opts[(at - 1 + opts.length) % opts.length].focus(); e.preventDefault(); }
+      else if (e.key === 'Escape') { close(); btn.focus(); e.stopPropagation(); }
+      else if (e.key === 'Tab') close();
+    });
+    document.addEventListener('click', e => { if (!menu.hidden && !root.contains(e.target)) close(); });
+
+    return { root, get value() { return value; } };
+  }
+
+  function numInput(placeholder) {
+    const input = el('input');
+    input.type = 'number';
+    input.inputMode = 'decimal';
+    input.step = 'any';
+    input.placeholder = placeholder;
+    return input;
+  }
+
+  const ICON_TO = '<svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 6.5h11l-3-3M16.5 13.5h-11l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function resultLine(name, value, unit, fromText, copyLabel) {
+    const box = el('div', 'conv__result');
+    box.appendChild(el('div', 'name', name));
+    const line = el('div', 'line');
+    line.appendChild(el('span', 'from', fromText));
+    const arrow = el('span', 'arrow');
+    arrow.innerHTML = ICON_TO;
+    line.appendChild(arrow);
+    const to = el('span', 'to');
+    to.appendChild(el('b', null, value));
+    to.appendChild(el('small', null, unit));
+    line.appendChild(to);
+    box.appendChild(line);
+    const cp = copyButton(copyLabel, value + ' ' + unit, null, 'Copy Converted ' + name);
+    cp.classList.add('copy--brief');
+    box.appendChild(cp);
+    return box;
+  }
+
+  function buildConverter() {
+    const root = el('div', 'conv');
+    root.id = 'conv';
+    root.hidden = true;
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-label', 'Unit converter');
+
+    root.appendChild(el('div', 'conv__title', 'Unit Converter'));
+
+    const TABS = [['weight', 'Weight'], ['length', 'Length'], ['box', 'Box']];
+    const tabs = el('div', 'conv__tabs');
+    tabs.setAttribute('role', 'tablist');
+    const thumb = el('span', 'conv__thumb');
+    tabs.appendChild(thumb);
+    const panes = {};
+    let active = 'weight';
+
+    const tabButtons = TABS.map(([key, label], i) => {
+      const b = el('button', 'conv__tab' + (i === 0 ? ' is-on' : ''), label);
+      b.type = 'button';
+      b.setAttribute('role', 'tab');
+      b.addEventListener('click', () => show(key));
+      tabs.appendChild(b);
+      return b;
+    });
+    root.appendChild(tabs);
+
+    function show(key) {
+      active = key;
+      const i = TABS.findIndex(([k]) => k === key);
+      thumb.style.transform = 'translateX(' + (i * 100) + '%)';
+      tabButtons.forEach((b, j) => { b.classList.toggle('is-on', j === i); b.setAttribute('aria-selected', String(j === i)); });
+      Object.entries(panes).forEach(([k, pane]) => { pane.hidden = k !== key; });
+      const first = panes[key].querySelector('input');
+      if (first) first.focus();
+    }
+
+    /* one value, one unit each side */
+    function simplePane(kind, from, to, placeholder) {
+      const pane = el('div', 'conv__pane');
+      const row = el('div', 'conv__row');
+      const input = numInput(placeholder);
+      const selFrom = unitPicker(kind, from);
+      const arrow = el('span', 'conv__arrow');
+      arrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9.5 4.5 13 8l-3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const selTo = unitPicker(kind, to);
+      row.append(input, selFrom.root, arrow, selTo.root);
+      pane.appendChild(row);
+      const go = el('button', 'conv__go', 'Convert');
+      go.type = 'button';
+      pane.appendChild(go);
+      const out = el('div', 'conv__out');
+      pane.appendChild(out);
+
+      pane.run = () => {
+        const v = parseFloat(input.value);
+        out.innerHTML = '';
+        if (!Number.isFinite(v)) { input.focus(); return; }
+        const r = convert(kind, v, selFrom.value, selTo.value);
+        out.appendChild(resultLine(kind === 'weight' ? 'Weight' : 'Length', fmt(r), selTo.value, fmt(v) + ' ' + selFrom.value, kind));
+      };
+      go.addEventListener('click', pane.run);
+      return pane;
+    }
+
+    /* a carton: three sides in one unit, a weight in another */
+    function boxPane() {
+      const pane = el('div', 'conv__pane');
+      pane.appendChild(el('div', 'conv__label', 'Length × Width × Height'));
+      const dims = el('div', 'conv__row conv__row--dims');
+      const L = numInput('L'), W = numInput('W'), H = numInput('H');
+      dims.append(L, W, H);
+      pane.appendChild(dims);
+      const drow = el('div', 'conv__row conv__row--units');
+      const dFrom = unitPicker('length', 'mm');
+      const dArrow = el('span', 'conv__arrow');
+      dArrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9.5 4.5 13 8l-3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const dTo = unitPicker('length', 'in');
+      drow.append(dFrom.root, dArrow, dTo.root);
+      pane.appendChild(drow);
+
+      pane.appendChild(el('div', 'conv__label', 'Weight'));
+      const wrow = el('div', 'conv__row');
+      const Wt = numInput('Weight');
+      const wFrom = unitPicker('weight', 'kg');
+      const wArrow = el('span', 'conv__arrow');
+      wArrow.innerHTML = dArrow.innerHTML;
+      const wTo = unitPicker('weight', 'lb');
+      wrow.append(Wt, wFrom.root, wArrow, wTo.root);
+      pane.appendChild(wrow);
+
+      const go = el('button', 'conv__go', 'Convert');
+      go.type = 'button';
+      pane.appendChild(go);
+      const out = el('div', 'conv__out');
+      pane.appendChild(out);
+
+      pane.run = () => {
+        out.innerHTML = '';
+        const sides = [L, W, H].map(i => parseFloat(i.value));
+        const wt = parseFloat(Wt.value);
+        const haveDims = sides.every(Number.isFinite);
+        const haveWt = Number.isFinite(wt);
+        if (!haveDims && !haveWt) { L.focus(); return; }
+        if (haveDims) {
+          const c = sides.map(v => fmt(convert('length', v, dFrom.value, dTo.value)));
+          out.appendChild(resultLine('Dimensions', c.join(' × '), dTo.value, sides.map(fmt).join(' × ') + ' ' + dFrom.value, 'dimensions'));
+        }
+        if (haveWt) {
+          out.appendChild(resultLine('Weight', fmt(convert('weight', wt, wFrom.value, wTo.value)), wTo.value, fmt(wt) + ' ' + wFrom.value, 'weight'));
+        }
+      };
+      go.addEventListener('click', pane.run);
+      return pane;
+    }
+
+    panes.weight = simplePane('weight', 'kg', 'lb', 'Weight');
+    panes.length = simplePane('length', 'mm', 'in', 'Length');
+    panes.box = boxPane();
+    Object.values(panes).forEach(p => root.appendChild(p));
+    panes.length.hidden = true;
+    panes.box.hidden = true;
+
+    // Enter anywhere in the card runs the tab you are on
+    root.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); panes[active].run(); }
+      if (e.key === 'Enter' && e.target.classList.contains('upick__btn')) e.stopPropagation();
+    });
+
+    root.show = show;
+    return root;
+  }
+
+  const tool = document.getElementById('tool');
+  const convToggle = document.getElementById('convToggle');
+  const conv = buildConverter();
+  tool.appendChild(conv);
+
+  function openConv(open) {
+    clearTimeout(conv._exit);
+    if (open) {
+      conv.classList.remove('is-out');
+      conv.hidden = false;
+      conv.classList.remove('is-mounted');
+      void conv.offsetWidth;
+      conv.classList.add('is-mounted');
+      convToggle.setAttribute('aria-expanded', 'true');
+      const first = conv.querySelector('.conv__pane:not([hidden]) input');
+      if (first) first.focus();
+    } else {
+      if (conv.hidden) return;
+      conv.classList.remove('is-mounted');
+      conv.classList.add('is-out');
+      convToggle.setAttribute('aria-expanded', 'false');
+      conv._exit = setTimeout(() => { conv.hidden = true; conv.classList.remove('is-out'); }, 190);
+    }
+  }
+  wordy(convToggle, 'Unit Converter');
+  convToggle.addEventListener('click', e => { e.stopPropagation(); openConv(conv.hidden); });
+  document.addEventListener('click', e => { if (!conv.hidden && !tool.contains(e.target)) openConv(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !conv.hidden) { openConv(false); convToggle.focus(); } });
+
+  /* The bright light leans toward the pointer while it is over bare canvas —
+     gathering speed, then settling — and drifts home when it leaves or
+     reaches a card. Its own sway keeps playing underneath. */
+  const magnet = document.querySelector('.bg__magnet');
+  const magnetBlob = magnet && magnet.querySelector('.bg__blob');
+  if (magnet && window.matchMedia('(hover: hover) and (pointer: fine)').matches
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const CANVAS = '.app, .workspace, .workspace__inner, .bg, .bg__grid, .bg__blob, .bg__magnet, .page-head, .page-head h1, .lead, .foot-note, .calc, .calc__main, .calc__stage, .calc__side, .result, .result__body, .toolbar';
+    let want = { x: 0, y: 0 }, pos = { x: 0, y: 0 }, vel = { x: 0, y: 0 }, pulling = false, ticking = false;
+    function tick() {
+      // a soft spring: force toward the target, heavily damped
+      const k = .0022, damp = .90;
+      vel.x = (vel.x + (want.x - pos.x) * k) * damp;
+      vel.y = (vel.y + (want.y - pos.y) * k) * damp;
+      pos.x += vel.x; pos.y += vel.y;
+      magnet.style.transform = 'translate(' + pos.x.toFixed(1) + 'px,' + pos.y.toFixed(1) + 'px)';
+      const still = Math.abs(vel.x) + Math.abs(vel.y) < .05 && Math.abs(want.x - pos.x) + Math.abs(want.y - pos.y) < 1;
+      if (still && !pulling) { ticking = false; return; }
+      requestAnimationFrame(tick);
+    }
+    function wake() { if (!ticking) { ticking = true; requestAnimationFrame(tick); } }
+    document.addEventListener('pointermove', e => {
+      const bare = e.target === document.documentElement || e.target === document.body || (e.target.matches && e.target.matches(CANVAS));
+      if (!bare) { if (pulling) { pulling = false; want = { x: 0, y: 0 }; wake(); } return; }
+      pulling = true;
+      const b = magnetBlob.getBoundingClientRect();
+      // where the light's centre would be without the pull, then the offset to the pointer
+      const cx = b.left + b.width / 2 - pos.x, cy = b.top + b.height / 2 - pos.y;
+      want = { x: e.clientX - cx, y: e.clientY - cy };
+      wake();
+    });
+    document.addEventListener('pointerleave', () => { pulling = false; want = { x: 0, y: 0 }; wake(); });
+  }
+
+  const themeToggle = document.getElementById('themeToggle');
+  function syncTheme() {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    themeToggle.setAttribute('aria-pressed', String(dark));
+    themeToggle.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+  }
+  themeToggle.addEventListener('click', () => {
+    const dark = document.documentElement.getAttribute('data-theme') !== 'dark';
+    if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.removeAttribute('data-theme');
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+    syncTheme();
+  });
+  syncTheme();
+
+  /* The canvas answers the scroll: while the page moves, the lights and the
+     grid run several times faster, then ease back to their crawl. Done by
+     playback rate on the animations already running, so nothing restarts. */
+  let canvasAnims = null, canvasRate = 1, canvasTarget = 1, canvasTicking = false, canvasCalm = null;
+  function paceCanvas() {
+    canvasRate += (canvasTarget - canvasRate) * .07;
+    if (canvasTarget === 1 && Math.abs(canvasRate - 1) < .01) { canvasRate = 1; canvasTicking = false; }
+    canvasAnims.forEach(a => { a.playbackRate = canvasRate; });
+    if (canvasTicking) requestAnimationFrame(paceCanvas);
+  }
+  workspace.addEventListener('scroll', () => {
+    if (!canvasAnims) canvasAnims = [...document.querySelectorAll('.bg__blob, .bg__grid')].flatMap(n => n.getAnimations());
+    if (!canvasAnims.length) return;
+    canvasTarget = 7;
+    clearTimeout(canvasCalm);
+    canvasCalm = setTimeout(() => { canvasTarget = 1; }, 140);
+    if (!canvasTicking) { canvasTicking = true; requestAnimationFrame(paceCanvas); }
+  }, { passive: true });
 
   const IMAGES = {{ images | tojson }};
 
@@ -986,6 +2969,62 @@
     return box;
   }
 
+  /* The drive that stands in for a result before one exists, drawn in the
+     same hand as the calculator's empty pallet: a soft disc, the drive in
+     the page's blues, and a magnifier that sweeps across it, looking. */
+  const EMPTY_ART = '<svg viewBox="0 0 160 120" fill="none" aria-hidden="true">'
+    + '<ellipse cx="80" cy="64" rx="66" ry="44" fill="var(--brand-soft)"/>'
+    + '<g transform="rotate(-8 80 66)">'
+    + '<rect x="46" y="24" width="68" height="86" rx="9" fill="#3f6fb5"/>'
+    + '<rect x="50" y="28" width="60" height="78" rx="6" fill="#dfe8fb"/>'
+    + '<circle cx="80" cy="60" r="24" fill="#3f6fb5"/>'
+    + '<circle cx="80" cy="60" r="21" fill="#eef3fc"/>'
+    + '<circle cx="80" cy="60" r="8" fill="#9db6e0"/>'
+    + '<circle cx="80" cy="60" r="3.2" fill="#2c5490"/>'
+    + '<path d="M101 98 84 66" stroke="#7f9bd0" stroke-width="6" stroke-linecap="round"/>'
+    + '<circle cx="101" cy="98" r="4.8" fill="#2c5490"/>'
+    + '<g fill="#9db6e0"><circle cx="54" cy="32" r="2.2"/><circle cx="106" cy="32" r="2.2"/><circle cx="54" cy="102" r="2.2"/><circle cx="106" cy="102" r="2.2"/></g>'
+    + '</g>'
+    + '<g class="art-glass">'
+    + '<circle cx="104" cy="44" r="15" fill="rgba(255,255,255,.35)" stroke="var(--brand)" stroke-width="5"/>'
+    + '<path d="M115 55 128 68" stroke="var(--brand)" stroke-width="6" stroke-linecap="round"/>'
+    + '</g>'
+    + '<g class="art-sparks" fill="var(--brand-line)"><circle cx="30" cy="30" r="3"/><circle cx="134" cy="22" r="2.2"/><circle cx="26" cy="92" r="2.4"/></g>'
+    + '</svg>';
+
+  /* A short notice that sees itself out. Takes DOM nodes so a product ID can
+     be set in the same face it wears everywhere else. */
+  const ICON_ALERT = '<svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
+    + '<path d="M9 2.6 16.4 15H1.6L9 2.6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>'
+    + '<path d="M9 7.2v3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+    + '<circle cx="9" cy="12.4" r=".95" fill="currentColor"/></svg>';
+
+  function notice(...parts) {
+    let host = document.querySelector('.toasts');
+    if (!host) {
+      host = el('div', 'toasts');
+      document.body.appendChild(host);
+    }
+
+    const note = el('div', 'toast');
+    note.setAttribute('role', 'status');
+    const mark = el('span');
+    mark.innerHTML = ICON_ALERT;
+    note.appendChild(mark);
+
+    const line = el('span');
+    parts.forEach(part => line.appendChild(typeof part === 'string' ? document.createTextNode(part) : part));
+    note.appendChild(line);
+
+    host.appendChild(note);
+    requestAnimationFrame(() => note.classList.add('is-in'));
+
+    setTimeout(() => {
+      note.classList.remove('is-in');
+      setTimeout(() => note.remove(), 300);
+    }, 2900);
+  }
+
   /* ---------- small buttons ---------- */
 
   const ICON_PLUS = '<svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
@@ -995,18 +3034,34 @@
   const ICON_ARROW = '<svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
     + '<path d="M9 14.4V3.9M4.4 8.5 9 3.9l4.6 4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  /* Confirms a send even when the results below look unchanged. */
+  /* The send button carries both its glyphs; is-sent decides which shows. */
+  function sendControl(tip, word, onClick) {
+    const button = el('button', 'icon-btn icon-btn--send tip');
+    button.type = 'button';
+    button.innerHTML = '<span class="send__glyphs">'
+                     + '<span class="send__ic send__arrow">' + ICON_ARROW + '</span>'
+                     + '<span class="send__ic send__check">' + ICON_DONE + '</span></span>';
+    button.appendChild(el('span', 'send__word', word));
+    button.dataset.tip = tip;
+    button.setAttribute('aria-label', tip);
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  /* Confirms a send even when the results below look unchanged. The ring is a
+     one-shot, so it is rewound by hand; the glyph swap is a transition and
+     simply retargets if a send lands while the last one is still showing. */
   function flashSent(button) {
-    button.classList.remove('is-sent');
-    void button.offsetWidth;            // rewind the ring so repeat sends replay it
-    button.classList.add('is-sent');
-    button.innerHTML = ICON_DONE;
+    if (!button.style.getPropertyValue('--send-w')) {
+      const word = button.querySelector('.send__word');
+      button.style.setProperty('--send-w', (40 + word.scrollWidth) + 'px');
+    }
+    button.classList.remove('is-ringing');
+    void button.offsetWidth;
+    button.classList.add('is-ringing', 'is-sent');
 
     clearTimeout(button._sent);
-    button._sent = setTimeout(() => {
-      button.classList.remove('is-sent');
-      button.innerHTML = ICON_ARROW;
-    }, 1150);
+    button._sent = setTimeout(() => button.classList.remove('is-sent', 'is-ringing'), 1500);
   }
 
   function iconButton(tip, icon, onClick, cls) {
@@ -1029,21 +3084,68 @@
        onSelect        (product) => void
   */
 
+  /* What the typed text is aiming at.
+       digits (optionally with "tb")  -> capacity, so 8 finds both 8 TB drives
+       something a Product ID starts with -> Product IDs only
+       something a SKU starts with        -> SKUs only
+       anything else                      -> ID, SKU and item together */
+  function search_(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return PRODUCTS.slice();
+
+    const asCapacity = q.match(/^(\d+)\s*(tb)?$/);
+    if (asCapacity) {
+      const digits = asCapacity[1];
+      const exact = parseInt(digits, 10);
+      return PRODUCTS
+        .filter(p => String(p.capacity) === digits || String(p.capacity).startsWith(digits))
+        .sort((a, b) => (a.capacity === exact ? 0 : 1) - (b.capacity === exact ? 0 : 1)
+                     || a.capacity - b.capacity
+                     || a.is_pro - b.is_pro);
+    }
+
+    const startsAnId = PRODUCTS.some(p => p.product_id.toLowerCase().startsWith(q));
+    const startsASku = PRODUCTS.some(p => p.sku.toLowerCase().startsWith(q));
+
+    if (startsAnId && !startsASku) return PRODUCTS.filter(p => p.product_id.toLowerCase().includes(q));
+    if (startsASku && !startsAnId) return PRODUCTS.filter(p => p.sku.toLowerCase().includes(q));
+
+    return PRODUCTS.filter(p =>
+      (p.item + ' ' + p.sku + ' ' + p.product_id).toLowerCase().includes(q));
+  }
+
   function createPicker(options) {
     const opts = Object.assign({
       variant: 'compact',                 // 'composer' is the big bubble on the lookup page
       placeholder: 'Choose a capacity',
       searchPlaceholder: 'Filter by Capacity, Product ID, or SKU',
       label: p => p.capacity + ' TB · ' + p.product_id,
+      marked: () => false,    // (product) => true when it is already on the list
+      stayOpen: false,        // keep the list up after a pick, for choosing several
       onSelect: () => {},
       onOpen: () => {},
       onClose: () => {}       // gets true when the close followed a pick
     }, options || {});
 
+    const PICK_HOLD = 140;    // the row gets this long to show the pick landed
+
+    function tickBadge() {
+      const badge = el('span', 'row__tick');
+      badge.innerHTML = ICON_DONE;
+      return badge;
+    }
+
+    function markTaken(row, product) {
+      if (!opts.marked(product)) return;
+      row.classList.add('is-taken');
+      row.appendChild(tickBadge());
+    }
+
     const composerMode = opts.variant === 'composer';
     let selectedId = null;
     let showing = false;
     let picking = false;      // true only while a pick is closing the list
+    let settling = false;     // true while close() hands focus back
 
     const search = el('input', composerMode ? 'composer__field' : 'search');
     search.type = 'text';
@@ -1112,6 +3214,7 @@
         row.appendChild(stack);
       }
 
+      markTaken(row, product);
       row.addEventListener('click', () => select(product.product_id));
       return row;
     }
@@ -1125,9 +3228,7 @@
       headSku.hidden = Boolean(q);
 
       if (q) {
-        const hits = PRODUCTS.filter(p =>
-          (p.capacity + 'tb ' + p.item + ' ' + p.sku + ' ' + p.product_id).toLowerCase().includes(q)
-        );
+        const hits = search_(q);
         if (!hits.length) {
           const li = el('li');
           const miss = el('div', 'row', 'Nothing matches “' + query.trim() + '”');
@@ -1156,6 +3257,7 @@
           row.appendChild(el('span', 'cap', group.label));
           row.appendChild(el('span', 'name', only.product_id));
           row.appendChild(el('span', 'count', only.sku));
+          markTaken(row, only);
           row.addEventListener('click', () => select(only.product_id));
           li.appendChild(row);
         } else {
@@ -1182,9 +3284,11 @@
           flyout.appendChild(card);
           li.appendChild(flyout);
 
-          li.addEventListener('mouseenter', () => placeFlyout(li));
+          li.addEventListener('mouseenter', () => { if (wide()) showFlyout(li); });
+          li.addEventListener('mouseleave', () => {
+            if (!li.classList.contains('is-open')) hideFlyout(li);
+          });
           parent.addEventListener('click', () => toggleGroup(li));
-          parent.addEventListener('focus', () => placeFlyout(li));
         }
 
         menu.appendChild(li);
@@ -1194,48 +3298,129 @@
     function placeFlyout(li) {
       if (!wide()) return;
       const flyout = li.querySelector('.flyout');
+      // only a mounted sub-list has a box worth measuring
+      if (!flyout || !flyout.classList.contains('is-mounted')) return;
       const anchor = li.getBoundingClientRect();
 
       // park it at 0,0 first: where that lands tells us what the browser is
-      // measuring from, which is not always the viewport
+      // measuring from, which is not always the viewport. The fold-open rides on
+      // the card inside, so this shell measures the same open or closed.
       flyout.style.left = '0px';
       flyout.style.top = '0px';
-      flyout.style.display = 'block';
       const origin = flyout.getBoundingClientRect();
       const width = origin.width || flyout.offsetWidth;
       const height = origin.height || flyout.offsetHeight;
-      flyout.style.display = '';
 
-      const left = Math.max(12, Math.min(anchor.right, window.innerWidth - width - 12));
-      const top = Math.max(12, Math.min(Math.max(12, anchor.top - 8), window.innerHeight - height - 12));
+      // The workspace masks its edges, and a mask clips everything painted past
+      // its box, fixed children included — so its box, less the scrollbar and
+      // the fade bands, is the real limit. Sideways the sub-list prefers the
+      // row's right, takes the left if that is the side with room, and only
+      // otherwise sits over the list. Up and down it stays inside the list it
+      // came out of, which keeps it off the buttons below.
+      const ws = workspace.getBoundingClientRect();
+      const edge = parseFloat(getComputedStyle(workspace).getPropertyValue('--edge')) || 56;
+      const minX = ws.left + 12, maxX = ws.left + workspace.clientWidth - 12;
+      const box = (menu.closest('.composer__list, .panel') || menu).getBoundingClientRect();
+      const minY = Math.max(box.top + 6, ws.top + edge);
+      const maxY = Math.min(box.bottom - 6, ws.bottom - edge);
+
+      let left = anchor.right;
+      if (left + width > maxX) {
+        const onLeft = anchor.left - width - 8;
+        left = onLeft >= minX ? onLeft : Math.max(minX, maxX - width);
+      }
+      const top = Math.max(minY, Math.min(anchor.top - 8, maxY - height));
 
       flyout.style.left = (left - origin.left) + 'px';
       flyout.style.top = (top - origin.top) + 'px';
+    }
+
+    /* A sub-list joins the layout, gets placed, and only then is let go, so the
+       unfold has somewhere to travel from. Folding away keeps the node around
+       until the transition has played out. */
+    const FLYOUT_EXIT = 270;
+
+    function showFlyout(li) {
+      const flyout = li.querySelector('.flyout');
+      if (!flyout) return;
+
+      clearTimeout(flyout._exit);
+      flyout.classList.add('is-mounted');
+      placeFlyout(li);
+
+      if (flyout._enter) cancelAnimationFrame(flyout._enter);
+      flyout._enter = requestAnimationFrame(() => {
+        flyout._enter = null;
+        flyout.classList.add('is-in');
+      });
+    }
+
+    function hideFlyout(li, now) {
+      const flyout = li.querySelector('.flyout');
+      if (!flyout) return;
+
+      if (flyout._enter) {
+        cancelAnimationFrame(flyout._enter);
+        flyout._enter = null;
+      }
+      flyout.classList.remove('is-in');
+      clearTimeout(flyout._exit);
+
+      if (now) { flyout.classList.remove('is-mounted'); return; }
+      flyout._exit = setTimeout(() => flyout.classList.remove('is-mounted'), FLYOUT_EXIT);
     }
 
     function toggleGroup(li) {
       const open = li.classList.toggle('is-open');
       li.querySelector('.row').setAttribute('aria-expanded', String(open));
       if (open) {
-        placeFlyout(li);
+        showFlyout(li);
         menu.querySelectorAll('li.group.is-open').forEach(other => {
           if (other !== li) closeGroup(other);
         });
+      } else {
+        hideFlyout(li);
       }
     }
 
-    function closeGroup(li) {
+    function closeGroup(li, now) {
       li.classList.remove('is-open');
       const row = li.querySelector('.row');
       if (row) row.setAttribute('aria-expanded', 'false');
+      hideFlyout(li, now);
     }
 
     /* open / close */
 
+    /* The floating panel unfolds and folds the way the composer bubble does, so
+       it has to outlive its own closing — [hidden] goes back on at the end. */
+    const PANEL_EXIT = 190;
+
+    function showPanel() {
+      clearTimeout(panel._exit);
+      panel.classList.remove('is-out');
+      panel.hidden = false;
+      // rewind, so reopening mid-close still plays the unfold
+      panel.classList.remove('is-mounted');
+      void panel.offsetWidth;
+      panel.classList.add('is-mounted');
+    }
+
+    function hidePanel() {
+      if (panel.hidden) return;
+      panel.classList.remove('is-mounted');
+      panel.classList.add('is-out');
+      clearTimeout(panel._exit);
+      panel._exit = setTimeout(() => {
+        panel.hidden = true;
+        panel.classList.remove('is-out');
+      }, PANEL_EXIT);
+    }
+
     function open(focusSearch) {
       showing = true;
       if (composerMode) root.classList.add('is-open');
-      else panel.hidden = false;
+      else showPanel();
       if (trigger) trigger.setAttribute('aria-expanded', 'true');
       renderMenu(search.value);
       if (focusSearch) search.focus();
@@ -1245,10 +3430,18 @@
     function close(refocus) {
       showing = false;
       if (composerMode) root.classList.remove('is-open');
-      else panel.hidden = true;
+      else hidePanel();
       if (trigger) trigger.setAttribute('aria-expanded', 'false');
-      menu.querySelectorAll('li.group.is-open').forEach(closeGroup);
-      if (refocus) (trigger || search).focus();
+      // Every group, not just the pinned ones: a sub-list floating beside the
+      // menu sits outside its overflow, so one left open on hover would be
+      // stranded on screen after the list folds away.
+      menu.querySelectorAll('li.group').forEach(li => closeGroup(li, true));
+      if (refocus) {
+        // focusing the field would otherwise trip the handler that reopens it
+        settling = true;
+        (trigger || search).focus();
+        settling = false;
+      }
       opts.onClose(picking);
       picking = false;
     }
@@ -1261,10 +3454,39 @@
         triggerLabel.textContent = opts.label(product);
         triggerLabel.className = 'picked';
       }
-      search.value = '';
+      if (!opts.stayOpen) search.value = '';
       picking = true;
-      close(true);
+
+      // the row swells and takes its tick, then the list folds — or, when it
+      // is staying up for more picks, redraws so the row shows its new state
+      const row = menu.querySelector('.row[data-product-id="' + productId + '"]');
+      if (row) {
+        row.classList.add('is-picked');
+        if (!row.querySelector('.row__tick')) row.appendChild(tickBadge());
+      }
+      // focus moves now, as the close used to move it, so wherever onSelect
+      // sends it afterwards is where it stays
+      settling = true;
+      (trigger || search).focus();
+      settling = false;
+
       opts.onSelect(product);
+      setTimeout(() => {
+        if (!showing) return;
+        if (opts.stayOpen) renderMenu(search.value);
+        else close(false);
+      }, PICK_HOLD);
+    }
+
+    // put a product back in place quietly, for when a pick has to be undone
+    function restore(productId) {
+      const product = productId && PRODUCTS.find(p => p.product_id === productId);
+      if (!product) { clear(); return; }
+      selectedId = productId;
+      if (triggerLabel) {
+        triggerLabel.textContent = opts.label(product);
+        triggerLabel.className = 'picked';
+      }
     }
 
     function clear() {
@@ -1281,23 +3503,43 @@
       trigger.addEventListener('click', () => showing ? close(false) : open(true));
     }
 
+    // a pointer heading for the buttons or the field leaves any hover-opened
+    // sub-list behind
+    [bar, search].forEach(node => node && node.addEventListener('pointerenter', () => {
+      menu.querySelectorAll('li.group:not(.is-open)').forEach(li => hideFlyout(li));
+    }));
+
     // the search bar opens the same menu
-    search.addEventListener('focus', () => { if (!showing) open(false); });
+    search.addEventListener('focus', () => { if (!showing && !settling) open(false); });
     search.addEventListener('click', () => { if (!showing) open(false); });
     search.addEventListener('input', () => {
       if (!showing) open(false);
       renderMenu(search.value);
     });
 
-    // Enter in the search bar takes the first match
+    // Enter in the search bar takes the first match — but only when something
+    // was typed, otherwise it would silently grab whatever sits at the top
     search.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
+      if (opts.stayOpen) {
+        // Enter is how a run of picks ends; typed text takes its first match
+        // on the way out, unless that match is already on the list
+        const first = search.value.trim() ? rows()[0] : null;
+        if (first && !first.classList.contains('is-taken')) first.click();
+        if (showing) close(true);
+        e.preventDefault();
+        e.stopPropagation();       // or the list handler would open it right back
+        return;
+      }
+      if (!search.value.trim()) return;
       const first = rows()[0];
       if (first) { first.click(); e.preventDefault(); }
     });
 
     document.addEventListener('click', e => {
-      if (showing && !root.contains(e.target)) close(false);
+      // a target already gone from the page was inside something we redrew
+      // on that same click (a chip's ×) — not a click outside
+      if (showing && e.target.isConnected && !root.contains(e.target)) close(false);
     });
 
     // a scrolled menu would leave an open flyout behind
@@ -1320,10 +3562,13 @@
       if (!list.length) return;
       const at = list.indexOf(document.activeElement);
       const next = at === -1 ? (dir > 0 ? 0 : list.length - 1) : (at + dir + list.length) % list.length;
-      list[next].focus();
+
+      // focus without the browser's instant jump, then ease it into view
+      list[next].focus({ preventScroll: true });
+      list[next].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
-    root.addEventListener('keydown', e => {
+    function onKeyDown(e) {
       if (e.key === 'Escape') {
         const openGroup = document.activeElement.closest?.('li.group.is-open');
         if (openGroup && document.activeElement.closest('.flyout')) {
@@ -1339,6 +3584,8 @@
       if (!showing) {
         if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
           open(false);
+          // land on the first row straight away, so one press is enough
+          if (e.key === 'ArrowDown') step(1);
           e.preventDefault();
         }
         return;
@@ -1356,14 +3603,48 @@
         const li = document.activeElement.closest?.('li.group.is-open');
         if (li) { closeGroup(li); li.querySelector('.row').focus(); e.preventDefault(); }
       }
+    }
+
+    root.addEventListener('keydown', onKeyDown);
+
+    // Focus can end up outside the list — the page body after a re-render, say —
+    // and then arrow keys would go nowhere. While the list is open, pick them up
+    // from the document too, unless the listener above already has them.
+    document.addEventListener('keydown', e => {
+      if (!showing) return;
+      const here = document.activeElement;
+      if (here && here !== document.body && root.contains(here)) return;
+      onKeyDown(e);
     });
 
     menu.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         const row = document.activeElement;
-        if (row.classList?.contains('row')) { row.click(); e.preventDefault(); }
+        if (row.classList?.contains('row')) {
+          row.click();
+          e.preventDefault();
+          // the pick already closed the list; without this the same keystroke
+          // reaches the handler that opens a closed list and reopens it
+          e.stopPropagation();
+        }
+        return;
+      }
+
+      // typing while a row is focused should carry on filtering, not fall on the floor
+      if (e.key === 'Backspace' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey)) {
+        search.focus();
       }
     });
+
+    // a sub-list placed while its list was still unfolding was measured
+    // against a box that had not reached its size yet; settle it once the
+    // list has
+    const replace = () => menu.querySelectorAll('li.group').forEach(li => {
+      const f = li.querySelector('.flyout');
+      if (f && f.classList.contains('is-mounted')) placeFlyout(li);
+    });
+    panel.addEventListener('animationend', replace);
+    panel.addEventListener('transitionend', replace);
 
     window.addEventListener('resize', () => {
       menu.querySelectorAll('li.group.is-open').forEach(placeFlyout);
@@ -1378,7 +3659,16 @@
       open,
       close,
       clear,
-      takeFirst() { const first = rows()[0]; if (first) first.click(); },
+      restore,
+      takeFirst() {
+        if (!search.value.trim()) return false;
+        const first = rows()[0];
+        if (!first || first.classList.contains('is-taken')) return false;
+        first.click();
+        return true;
+      },
+      get isOpen() { return showing; },
+      refresh() { if (showing) renderMenu(search.value); },
       get selected() { return selectedId ? PRODUCTS.find(p => p.product_id === selectedId) : null; }
     };
   }

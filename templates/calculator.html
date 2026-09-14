@@ -9,28 +9,37 @@
 {% endblock %}
 
 {% block content %}
-<div class="composer composer--form" id="composer">
-  <div class="line-head" aria-hidden="true">
-    <span></span>
-    <span>Product</span>
-    <span>HDD Units</span>
-    <span></span>
+<div class="calc">
+  <div class="calc__main">
+    <div class="composer composer--form" id="composer">
+      <div class="line-head" aria-hidden="true">
+        <span></span>
+        <span>Product</span>
+        <span>HDD Units</span>
+        <span></span>
+      </div>
+
+      <div class="lines" id="lines"></div>
+
+      <div class="composer__bar" id="formBar"></div>
+    </div>
+
+    <p class="foot-note">Calculations require full-case quantities; partial cartons are not supported.</p>
+
+    <div id="out"></div>
+    <div class="calc__stage" id="stage"></div>
   </div>
 
-  <div class="lines" id="lines"></div>
-
-  <div class="composer__bar" id="formBar"></div>
+  <aside class="calc__side" id="side"></aside>
 </div>
-
-<p class="foot-note">Calculations require full-case quantities; partial cartons are not supported.</p>
-
-<div class="result" id="out"></div>
 {% endblock %}
 
 {% block script %}
 <script>
   const lines = document.getElementById('lines');
   const out = document.getElementById('out');
+  const stage = document.getElementById('stage');
+  const side = document.getElementById('side');
 
   const BOX = PALLET.box;                      // 20 x 11 x 9 in (L x W x H)
   const PER_BOX = PALLET.drives_per_box;       // drives per carton
@@ -41,7 +50,29 @@
   const SEND_UNIT = UNIT === 'lb' ? 'lbs' : UNIT;
 
   const entries = [];
-  let sendControl = null;
+  let sendBtn = null;
+  let addProductBtn = null;
+  let setAddWord = null;
+
+  /* An empty pallet with an arrow settling onto it: the deck and its slats
+     in the page's blues, a soft disc behind, and the arrow in the brand colour
+     so it reads as the thing to do. */
+  const ART_EMPTY_PALLET = '<svg viewBox="0 0 160 120" fill="none" aria-hidden="true">'
+    + '<ellipse cx="80" cy="64" rx="66" ry="44" fill="var(--brand-soft)"/>'
+    + '<g class="art-arrow">'
+    + '<path d="M80 18v34" stroke="var(--brand)" stroke-width="6" stroke-linecap="round"/>'
+    + '<path d="M66 40 80 54 94 40" stroke="var(--brand)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '</g>'
+    + '<g transform="translate(0 6)">'
+    + '<path d="M80 62 130 82 80 102 30 82Z" fill="#3f6fb5"/>'
+    + '<path d="M30 82v8l50 20v-8Z" fill="#2c5490"/>'
+    + '<path d="M130 82v8l-50 20v-8Z" fill="#245081"/>'
+    + '<path d="M44 76.4 90 94.8M58 70.8 104 89.2M72 65.2 118 83.6" stroke="#2c5490" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>'
+    + '<path d="M40 92v7l8 3.2v-7ZM76 106v7l8 3.2v-7ZM112 92v7l8-3.2v-7Z" fill="#1d3f6e"/>'
+    + '</g>'
+    + '<g fill="var(--brand-line)"><circle cx="34" cy="30" r="3"/><circle cx="128" cy="24" r="2.2"/><circle cx="140" cy="48" r="2.6"/></g>'
+    + '</svg>';
+
 
   if (!CATALOG.length) {
     document.getElementById('lead').remove();
@@ -49,34 +80,92 @@
     out.innerHTML = '<p class="empty">No drive data loaded. Check that hdd.json sits next to app.py and contains valid JSON, then reload.</p>';
   } else {
     addLine();
+    renderIdle();
 
     const bar = document.getElementById('formBar');
-    bar.appendChild(iconButton('Add another product', ICON_PLUS, e => {
+    addProductBtn = iconButton('Add another product', ICON_PLUS, e => {
       e.stopPropagation();            // keep the new row's list from closing again
-      const entry = addLine();
-      entry.picker.open(true);
-    }, 'icon-btn icon-btn--round tip--left'));
+      // once it has turned, the cross folds the open list away
+      const open = entries.find(entry => entry.picker.isOpen);
+      if (open) { open.picker.close(false); return; }
+      const entry = addLine(true);
+      // wait for the row to finish unfolding: while it folds it clips its own
+      // overflow, which would cut off the list dropping out of it
+      setTimeout(() => entry.picker.open(true), ROW_IN);
+    }, 'icon-btn icon-btn--toggle');
+    setAddWord = wordy(addProductBtn, 'Add product');
+    bar.appendChild(addProductBtn);
     bar.appendChild(el('span', 'spacer'));
-    bar.appendChild(iconButton('Start Over', ICON_CROSS, startOver, 'icon-btn icon-btn--quiet'));
-    sendControl = iconButton('Calculate Pallet', ICON_ARROW, calculate, 'icon-btn icon-btn--send');
-    bar.appendChild(sendControl);
+    bar.appendChild(clearControl('Start Over', 'Cleared', startOver));
+    sendBtn = sendControl('Calculate Pallet', 'Calculated', calculate);
+    bar.appendChild(sendBtn);
   }
 
   /* ---------- rows ---------- */
 
-  function addLine() {
+  /* Rows fold in and out over their own measured height, the way the lists do. */
+  const ROW_IN = 240, ROW_OUT = 220;
+
+  function foldIn(line) {
+    line.style.setProperty('--row-h', line.scrollHeight + 'px');
+    line.classList.add('is-entering');
+    setTimeout(() => {
+      line.classList.remove('is-entering');
+      line.style.removeProperty('--row-h');
+    }, ROW_IN);
+  }
+
+  function foldOut(line) {
+    line.style.setProperty('--row-h', line.scrollHeight + 'px');
+    line.classList.add('is-leaving');
+    setTimeout(() => line.remove(), ROW_OUT);
+  }
+
+  /* Any row's list being open turns the plus into the cross that closes it. */
+  function armAdd() {
+    if (!addProductBtn) return;
+    const open = entries.some(entry => entry.picker.isOpen);
+    addProductBtn.classList.toggle('is-x', open);
+    const word = open ? 'Close list' : 'Add product';
+    if (setAddWord) setAddWord(word);
+    addProductBtn.setAttribute('aria-label', word);
+  }
+
+  function addLine(animate) {
     const line = el('div', 'line');
 
     const number = el('span', 'line__n');
     line.appendChild(number);
 
     const pick = el('div', 'line__pick');
+    let held = null;                       // what this row had before the last pick
+
     const picker = createPicker({
       variant: 'compact',
       placeholder: 'Choose a product',
       searchPlaceholder: 'Filter by Capacity, Product ID, or SKU',
       label: p => p.capacity + ' TB · ' + p.product_id,
-      onSelect: () => { line.classList.remove('is-bad'); qty.focus(); }
+      marked: p => entries.some(entry =>
+        entry.picker.selected && entry.picker.selected.product_id === p.product_id),
+      onOpen: armAdd,
+      onClose: armAdd,
+      onSelect: product => {
+        const clash = entries.some(other =>
+          other.picker !== picker &&
+          other.picker.selected &&
+          other.picker.selected.product_id === product.product_id
+        );
+
+        if (clash) {
+          notice(el('b', null, product.product_id), ' is already on this pallet.');
+          picker.restore(held && held.product_id);      // leave the row as it was
+          return;
+        }
+
+        held = product;
+        line.classList.remove('is-bad');
+        qty.focus();
+      }
     });
     pick.appendChild(picker.root);
     line.appendChild(pick);
@@ -90,7 +179,55 @@
     qty.setAttribute('aria-label', 'HDD units ordered');
     qty.addEventListener('input', () => line.classList.remove('is-bad'));
     qty.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
-    qtyWrap.appendChild(qty);
+    // step in whole cartons, and start at one carton from empty
+    function nudge(direction) {
+      const now = parseInt(qty.value, 10);
+      const next = Number.isFinite(now) ? now + direction * PER_BOX : PER_BOX;
+      qty.value = String(Math.max(PER_BOX, next));
+      line.classList.remove('is-bad');
+      qty.focus();
+    }
+
+    /* One step on a press; hold it and the steps keep coming. The pointer path
+       takes the first step itself and then swallows the click that follows it,
+       so a mouse press is never counted twice — the keyboard still arrives as
+       a plain click and steps once. */
+    function holdable(button, direction) {
+      let timer = null, byPointer = false;
+      const stop = () => { clearTimeout(timer); clearInterval(timer); timer = null; };
+
+      button.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;
+        e.preventDefault();                     // keep focus where nudge puts it
+        byPointer = true;
+        nudge(direction);
+        button.setPointerCapture(e.pointerId);
+        timer = setTimeout(() => { timer = setInterval(() => nudge(direction), 70); }, 380);
+      });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => button.addEventListener(type, stop));
+      button.addEventListener('click', () => {
+        if (byPointer) { byPointer = false; return; }
+        nudge(direction);
+      });
+    }
+
+    const less = el('button', 'qty-step', '−');
+    less.type = 'button';
+    less.setAttribute('aria-label', 'Fewer units');
+    holdable(less, -1);
+
+    const more = el('button', 'qty-step', '+');
+    more.type = 'button';
+    more.setAttribute('aria-label', 'More units');
+    holdable(more, 1);
+
+    qty.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault();                       // the field steps by cartons, not by one
+      nudge(e.key === 'ArrowUp' ? 1 : -1);
+    });
+
+    qtyWrap.append(less, qty, more);
     line.appendChild(qtyWrap);
 
     const remove = el('button', 'line__rm', '×');
@@ -100,12 +237,14 @@
     remove.addEventListener('click', () => {
       const at = entries.findIndex(entry => entry.line === line);
       if (at > -1) entries.splice(at, 1);
-      line.remove();
+      foldOut(line);
       renumber();
+      armAdd();               // the row that held the open list is gone
     });
     line.appendChild(remove);
 
     lines.appendChild(line);
+    if (animate) foldIn(line);
 
     const entry = { line, picker, qty, number, remove };
     entries.push(entry);
@@ -121,10 +260,19 @@
   }
 
   function startOver() {
-    entries.splice(0, entries.length);
-    lines.innerHTML = '';
+    // the rows on their way out are no longer part of the order, but they stay
+    // in the layout long enough to fold away before the fresh one unfolds
+    const leaving = entries.splice(0, entries.length);
+    leaving.forEach(entry => { entry.picker.close(false); foldOut(entry.line); });
     out.innerHTML = '';
-    addLine();
+    stage.innerHTML = '';
+    renderIdle();
+    armAdd();
+
+    setTimeout(() => {
+      lines.innerHTML = '';
+      addLine(true);
+    }, ROW_OUT);
   }
 
   /* ---------- the pallet itself ---------- */
@@ -221,9 +369,10 @@
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   const CARTON_FILL = [190, 157, 124];        // #be9d7c
-  const CARTON_EDGE = '#7c6349';
+  const CARTON_EDGE = '#57422d';              // dark enough that every carton stays countable
   const WOOD_FILL = [0, 94, 166];             // #005ea6, the usual plastic-pallet blue
   const WOOD_EDGE = '#00406f';
+  const WOOD_GRAIN = 'rgba(0, 36, 80, .5)';   // moulded grain lines in the plastic
   const FACE_LIGHT = { top: 1, x: 0.82, y: 0.63 };
 
   /* Packaging labels, drawn once into <defs> and stamped onto a carton face with
@@ -333,6 +482,32 @@
     art += '<g fill="#22222a">' + words(14, 136, 72, 2.8, 131) + '</g>';
 
     return art;
+  }
+
+  /* The black-and-white FRAGILE sticker: the glass on its white panel at the
+     left, the three handling marks and the two lines of type at the right,
+     all as rects, since at this size type is texture. Art space 100 by 55. */
+  function fragileLabel() {
+    let art = '<rect x="0" y="0" width="100" height="55" rx="4" fill="#111"/>';
+    art += '<rect x="2" y="2" width="96" height="51" rx="3" fill="none" stroke="#fff" stroke-width="1.2"/>';
+    // the glass panel
+    art += '<rect x="6" y="6" width="27" height="43" rx="2" fill="#fff"/>';
+    art += '<path d="M12 11h15l-1.5 9a6 6 0 0 1-12 0Z" fill="#111"/>';
+    art += '<rect x="18.6" y="26" width="1.8" height="14" fill="#111"/>';
+    art += '<rect x="13" y="40" width="13" height="2.4" rx="1.2" fill="#111"/>';
+    // handling marks
+    art += '<g fill="#fff">';
+    art += '<rect x="40" y="8" width="12" height="9" rx="1"/><rect x="56" y="8" width="12" height="9" rx="1"/><rect x="72" y="8" width="12" height="9" rx="1"/>';
+    art += '</g>';
+    // FRAGILE / HANDLE WITH CARE
+    art += '<rect x="40" y="22" width="52" height="13" rx="1.5" fill="#fff"/>';
+    art += '<rect x="40" y="39" width="46" height="6" rx="1.5" fill="#fff"/>';
+    return art;
+  }
+  function fragileFaint() {
+    return '<rect x="0" y="0" width="100" height="55" rx="4" fill="#111"/>'
+         + '<rect x="6" y="6" width="27" height="43" rx="2" fill="#fff"/>'
+         + '<rect x="40" y="22" width="52" height="13" rx="1.5" fill="#fff"/>';
   }
 
   /* Stand-ins for when a label lands on screen too small for any of that to
@@ -452,7 +627,9 @@
       '<g id="mfgLabel">' + manufacturerLabel() + '</g>' +
       '<g id="shipLabel">' + shippingLabel() + '</g>' +
       '<g id="mfgLabelFaint">' + faintLabel(false) + '</g>' +
-      '<g id="shipLabelFaint">' + faintLabel(true) + '</g>';
+      '<g id="shipLabelFaint">' + faintLabel(true) + '</g>' +
+      '<g id="fragileLabel">' + fragileLabel() + '</g>' +
+      '<g id="fragileLabelFaint">' + fragileFaint() + '</g>';
     svg.appendChild(defs);
 
     const canvas = document.createElementNS(SVG_NS, 'g');
@@ -462,8 +639,6 @@
 
     const caption = el('figcaption');
     caption.appendChild(el('span', null, 'Drag to turn'));
-    const readout = el('span', 'stage__dims');
-    caption.appendChild(readout);
     stage.appendChild(caption);
 
     const HOME = { az: -0.72, el: 0.46 };
@@ -654,13 +829,95 @@
         poly.setAttribute('points', points);
         poly.setAttribute('fill', faceColor(base, face.light));
         poly.setAttribute('stroke', solid.prism.wood ? WOOD_EDGE : CARTON_EDGE);
-        poly.setAttribute('stroke-width', '0.7');
+        poly.setAttribute('stroke-width', solid.prism.wood ? '0.8' : '1.1');
         poly.setAttribute('stroke-linejoin', 'round');
         frag.appendChild(poly);
+
+        if (solid.prism.wood) grain(solid, face, frag);
       });
 
       if (solid.prism.wood) return;
+      tape(solid.prism, ctx, frag);
+      stickSticker(solid.prism, ctx, frag);
       stickLabels(solid.prism, ctx, frag);
+    }
+
+    /* Two lines of grain down each visible face of a board, along whichever
+       of its sides is the longer. */
+    function grain(solid, face, frag) {
+      const p = solid.prism;
+      const c = face.corners.map(i => solid.points[i]);
+      const w = face.corners.map(i => CORNERS[i]);
+      const span = (a, b) => Math.abs((w[b][0] - w[a][0]) * p.l) + Math.abs((w[b][1] - w[a][1]) * p.w) + Math.abs((w[b][2] - w[a][2]) * p.h);
+      const alongFirst = span(0, 1) >= span(1, 2);
+      [0.32, 0.64].forEach(t => {
+        const lerp = (a, b) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+        const from = alongFirst ? lerp(c[0], c[3]) : lerp(c[0], c[1]);
+        const to = alongFirst ? lerp(c[1], c[2]) : lerp(c[3], c[2]);
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', from.x.toFixed(2)); line.setAttribute('y1', from.y.toFixed(2));
+        line.setAttribute('x2', to.x.toFixed(2)); line.setAttribute('y2', to.y.toFixed(2));
+        line.setAttribute('stroke', WOOD_GRAIN);
+        line.setAttribute('stroke-width', '0.6');
+        frag.appendChild(line);
+      });
+    }
+
+    /* A strip of clear tape along the top seam, with the print on it as dark
+       blobs, and a short tab down each end between the two labels. Sealing
+       tape never reaches all the way round. */
+    function tape(prism, ctx, frag) {
+      const toward = ctx.toward;
+      const top = prism.z + prism.h;
+      const alongX = prism.l >= prism.w;
+      const band = 0.085 * (alongX ? prism.w : prism.l);     // narrower than the gap between labels
+      const cx = prism.x + prism.l / 2, cy = prism.y + prism.w / 2;
+
+      function strip(points) {
+        const scr = points.map(pt => ctx.toScreen(pt));
+        const poly = document.createElementNS(SVG_NS, 'polygon');
+        poly.setAttribute('points', scr.map(q => q.x.toFixed(2) + ',' + q.y.toFixed(2)).join(' '));
+        poly.setAttribute('fill', 'rgba(255, 255, 255, .34)');
+        poly.setAttribute('stroke', 'rgba(255, 255, 255, .5)');
+        poly.setAttribute('stroke-width', '0.35');
+        frag.appendChild(poly);
+        return scr;
+      }
+      function print(a, b) {
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', a.x.toFixed(2)); line.setAttribute('y1', a.y.toFixed(2));
+        line.setAttribute('x2', b.x.toFixed(2)); line.setAttribute('y2', b.y.toFixed(2));
+        const px = Math.hypot(b.x - a.x, b.y - a.y);
+        const unit = px / (alongX ? prism.l : prism.w);      // screen px per inch
+        line.setAttribute('stroke', 'rgba(38, 28, 18, .55)');
+        line.setAttribute('stroke-width', (unit * .28).toFixed(2));
+        line.setAttribute('stroke-dasharray', (unit * 1.3).toFixed(2) + ' ' + (unit * .7).toFixed(2));
+        frag.appendChild(line);
+      }
+
+      if (toward[2] > 0.0001) {
+        // top: the seam runs the length of the carton through its middle
+        const pts = alongX
+          ? [[prism.x, cy - band / 2, top], [prism.x + prism.l, cy - band / 2, top], [prism.x + prism.l, cy + band / 2, top], [prism.x, cy + band / 2, top]]
+          : [[cx - band / 2, prism.y, top], [cx + band / 2, prism.y, top], [cx + band / 2, prism.y + prism.w, top], [cx - band / 2, prism.y + prism.w, top]];
+        strip(pts);
+        const mid = alongX
+          ? [ctx.toScreen([prism.x + prism.l * .06, cy, top]), ctx.toScreen([prism.x + prism.l * .94, cy, top])]
+          : [ctx.toScreen([cx, prism.y + prism.w * .06, top]), ctx.toScreen([cx, prism.y + prism.w * .94, top])];
+        print(mid[0], mid[1]);
+      }
+
+      // the tabs: a quarter of the way down each end, between the labels
+      const drop = prism.h * .26;
+      const ends = alongX
+        ? [{ n: [1, 0, 0], pts: [[prism.x + prism.l, cy - band / 2, top], [prism.x + prism.l, cy + band / 2, top], [prism.x + prism.l, cy + band / 2, top - drop], [prism.x + prism.l, cy - band / 2, top - drop]] },
+           { n: [-1, 0, 0], pts: [[prism.x, cy + band / 2, top], [prism.x, cy - band / 2, top], [prism.x, cy - band / 2, top - drop], [prism.x, cy + band / 2, top - drop]] }]
+        : [{ n: [0, 1, 0], pts: [[cx + band / 2, prism.y + prism.w, top], [cx - band / 2, prism.y + prism.w, top], [cx - band / 2, prism.y + prism.w, top - drop], [cx + band / 2, prism.y + prism.w, top - drop]] },
+           { n: [0, -1, 0], pts: [[cx - band / 2, prism.y, top], [cx + band / 2, prism.y, top], [cx + band / 2, prism.y, top - drop], [cx - band / 2, prism.y, top - drop]] }];
+      ends.forEach(end => {
+        const facing = end.n[0] * toward[0] + end.n[1] * toward[1] + end.n[2] * toward[2];
+        if (facing > 0.0001) strip(end.pts);
+      });
     }
 
     function stickLabels(prism, ctx, frag) {
@@ -692,20 +949,55 @@
       if (onScreen < 3.5) return;                   // below this it is one pale smudge
       const suffix = onScreen < 15 ? 'Faint' : '';
 
-      [['mfgLabel' + suffix, face.width * 0.05], ['shipLabel' + suffix, face.width * 0.55]].forEach(slot => {
-        const left = slot[1];
-        const ox = corner.x + ax * left + dx * top;
-        const oy = corner.y + ay * left + dy * top;
-
+      function stamp(id, left, down, w, h, artW, artH) {
+        const ox = corner.x + ax * left + dx * down;
+        const oy = corner.y + ay * left + dy * down;
+        const sx = w / artW, sy = h / artH;
         const use = document.createElementNS(SVG_NS, 'use');
-        use.setAttribute('href', '#' + slot[0]);
-        use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + slot[0]);
+        use.setAttribute('href', '#' + id);
+        use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + id);
         use.setAttribute('transform', 'matrix('
-          + (ax * kx).toFixed(4) + ',' + (ay * kx).toFixed(4) + ','
-          + (dx * ky).toFixed(4) + ',' + (dy * ky).toFixed(4) + ','
+          + (ax * sx).toFixed(4) + ',' + (ay * sx).toFixed(4) + ','
+          + (dx * sy).toFixed(4) + ',' + (dy * sy).toFixed(4) + ','
           + ox.toFixed(2) + ',' + oy.toFixed(2) + ')');
         frag.appendChild(use);
-      });
+      }
+
+      stamp('mfgLabel' + suffix, face.width * 0.05, top, labelW, labelH, ART_W, ART_H);
+      stamp('shipLabel' + suffix, face.width * 0.55, top, labelW, labelH, ART_W, ART_H);
+    }
+
+    /* The FRAGILE sticker lies on the lid, on the left of the tape, reading
+       along the carton's length. */
+    function stickSticker(prism, ctx, frag) {
+      if (ctx.toward[2] <= 0.0001) return;
+      const alongX = prism.l >= prism.w;
+      const top = prism.z + prism.h;
+      const len = alongX ? prism.l : prism.w, wid = alongX ? prism.w : prism.l;
+      const h = wid * 0.32, w = h / 0.55;
+      // the near-left corner of the lid, clear of the tape down the middle
+      const origin = alongX
+        ? [prism.x + len * 0.06, prism.y + wid * 0.08, top]
+        : [prism.x + wid * 0.08, prism.y + len * 0.06, top];
+      const across = alongX ? [1, 0, 0] : [0, 1, 0];
+      const down = alongX ? [0, 1, 0] : [1, 0, 0];
+
+      const corner = ctx.toScreen(origin);
+      const pa = ctx.toScreen([origin[0] + across[0], origin[1] + across[1], origin[2]]);
+      const pd = ctx.toScreen([origin[0] + down[0], origin[1] + down[1], origin[2]]);
+      const ax = pa.x - corner.x, ay = pa.y - corner.y, dx = pd.x - corner.x, dy = pd.y - corner.y;
+      const onScreen = Math.sqrt(ax * ax + ay * ay) * w;
+      if (onScreen < 3) return;
+      const id = 'fragileLabel' + (onScreen < 14 ? 'Faint' : '');
+      const sx = w / 100, sy = h / 55;
+      const use = document.createElementNS(SVG_NS, 'use');
+      use.setAttribute('href', '#' + id);
+      use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + id);
+      use.setAttribute('transform', 'matrix('
+        + (ax * sx).toFixed(4) + ',' + (ay * sx).toFixed(4) + ','
+        + (dx * sy).toFixed(4) + ',' + (dy * sy).toFixed(4) + ','
+        + corner.x.toFixed(2) + ',' + corner.y.toFixed(2) + ')');
+      frag.appendChild(use);
     }
 
     /* drag to turn */
@@ -734,8 +1026,6 @@
         svg.setAttribute('aria-label',
           pallet.cartons + ' cartons on a pallet, '
           + pallet.length + ' by ' + pallet.width + ' by ' + pallet.height + ' inches');
-        readout.textContent = 'DIM: ' + pallet.length + ' × ' + pallet.width + ' × '
-          + pallet.height + ' in · Weight: ' + pallet.weight + ' ' + SEND_UNIT;
         draw();
       }
     };
@@ -745,6 +1035,14 @@
 
 
   function calculate() {
+    // nothing touched at all reads better as a nudge than as a list of faults
+    const untouched = entries.every(entry => !entry.picker.selected && !entry.qty.value.trim());
+    if (untouched) {
+      entries.forEach(entry => entry.line.classList.remove('is-bad'));
+      return showProblems(entries.map((entry, i) =>
+        'Select the required product and input the corresponding order quantity in Row ' + (i + 1) + '.'));
+    }
+
     const order = [];
     const problems = [];
     let bad = 0;
@@ -755,16 +1053,21 @@
       const raw = entry.qty.value.trim();
       const drives = Number(raw);
 
-      if (!product && !raw) return;   // an untouched row is fine, just skip it
+      if (!product && !raw) {
+        problems.push('Row ' + (i + 1) + ' is incomplete. Please enter the missing data or remove the row to proceed.');
+        entry.line.classList.add('is-bad');
+        bad++;
+        return;
+      }
 
       if (!product) {
-        problems.push('Row ' + (i + 1) + ' needs a product.');
+        problems.push('Select the required product for Row ' + (i + 1) + '.');
         entry.line.classList.add('is-bad');
         bad++;
         return;
       }
       if (!raw || !Number.isFinite(drives) || drives < 1 || !Number.isInteger(drives)) {
-        problems.push('Row ' + (i + 1) + ' needs a whole number of drives, 1 or more.');
+        problems.push('Enter HDD units in Row ' + (i + 1) + '.');
         entry.line.classList.add('is-bad');
         bad++;
         return;
@@ -787,7 +1090,7 @@
     if (!order.length) return showProblems(['Pick a product and enter how many drives were ordered.']);
 
     renderPallet(buildPallet(order));
-    if (sendControl) flashSent(sendControl);
+    if (sendBtn) flashSent(sendBtn);
   }
 
   function showProblems(list) {
@@ -799,15 +1102,45 @@
 
   /* ---------- output ---------- */
 
-  const ICON_BOX = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">'
-    + '<path d="M10 2.6 17 6v8l-7 3.4L3 14V6l7-3.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
-    + '<path d="M3 6l7 3.4L17 6M10 9.4v8" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
-  const ICON_SCALE = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">'
-    + '<path d="M7.6 6.2a2.4 2.4 0 1 1 4.8 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
-    + '<path d="M6.6 6.2h6.8l2.1 10.2a1 1 0 0 1-1 1.2H5.5a1 1 0 0 1-1-1.2L6.6 6.2Z"'
-    + ' stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  /* One family of marks for the four figures, drawn on a 24 px grid with a
+     1.6 px line and a soft fill of the same colour behind the key face — a
+     boxed volume over its measuring rule, a parcel on a platform scale, a
+     stack of two taped cartons, a rack of two drives. Each is the thing
+     itself, so no legend is needed. */
+  const ICON_BOX = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<path d="M12 2.4 19 6.3 12 10.2 5 6.3Z" fill="currentColor" fill-opacity=".22"/>'
+    + '<path d="M12 2.4 19 6.3v7.6L12 17.8 5 13.9V6.3L12 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+    + '<path d="M5 6.3 12 10.2l7-3.9M12 10.2v7.6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+    + '<path d="M4 21.4h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+    + '<path d="M4 19.9v3M20 19.9v3M8 20.4v2M12 20.4v2M16 20.4v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  const ICON_SCALE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<rect x="8.3" y="5.2" width="7.4" height="7.6" rx="1.5" fill="currentColor" fill-opacity=".22"/>'
+    + '<rect x="8.3" y="5.2" width="7.4" height="7.6" rx="1.5" stroke="currentColor" stroke-width="1.6"/>'
+    + '<path d="M8.3 8.4h7.4" stroke="currentColor" stroke-width="1.6"/>'
+    + '<path d="M6 12.8h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+    + '<path d="M12 12.8v4" stroke="currentColor" stroke-width="1.6"/>'
+    + '<rect x="3" y="16.8" width="18" height="4" rx="2" fill="currentColor" fill-opacity=".22"/>'
+    + '<rect x="3" y="16.8" width="18" height="4" rx="2" stroke="currentColor" stroke-width="1.6"/>'
+    + '<circle cx="17.6" cy="18.8" r="1" fill="currentColor"/></svg>';
+  const ICON_CARTON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<rect x="3" y="12.6" width="11.4" height="8.8" rx="1.6" fill="currentColor" fill-opacity=".22"/>'
+    + '<rect x="3" y="12.6" width="11.4" height="8.8" rx="1.6" stroke="currentColor" stroke-width="1.6"/>'
+    + '<path d="M3 15.8h11.4M8.7 12.6v8.8" stroke="currentColor" stroke-width="1.6"/>'
+    + '<rect x="9.6" y="2.6" width="11.4" height="8.8" rx="1.6" fill="#fff"/>'
+    + '<rect x="9.6" y="2.6" width="11.4" height="8.8" rx="1.6" fill="currentColor" fill-opacity=".22"/>'
+    + '<rect x="9.6" y="2.6" width="11.4" height="8.8" rx="1.6" stroke="currentColor" stroke-width="1.6"/>'
+    + '<path d="M9.6 5.8H21M15.3 2.6v8.8" stroke="currentColor" stroke-width="1.6"/></svg>';
+  const ICON_DRIVES = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<rect x="3" y="3" width="18" height="7.6" rx="2" fill="currentColor" fill-opacity=".22"/>'
+    + '<rect x="3" y="3" width="18" height="7.6" rx="2" stroke="currentColor" stroke-width="1.6"/>'
+    + '<rect x="3" y="13.4" width="18" height="7.6" rx="2" fill="currentColor" fill-opacity=".22"/>'
+    + '<rect x="3" y="13.4" width="18" height="7.6" rx="2" stroke="currentColor" stroke-width="1.6"/>'
+    + '<circle cx="8" cy="6.8" r="2" stroke="currentColor" stroke-width="1.6"/>'
+    + '<circle cx="8" cy="17.2" r="2" stroke="currentColor" stroke-width="1.6"/>'
+    + '<circle cx="17.4" cy="6.8" r="1.1" fill="currentColor"/>'
+    + '<circle cx="17.4" cy="17.2" r="1.1" fill="currentColor"/></svg>';
 
-  function statCard(icon, tone, label, value, unit, copyLabel, copyValue) {
+  function statCard(icon, tone, label, value, unit, copyLabel, copyValue, key) {
     const card = el('div', 'stat');
 
     const badge = el('span', 'stat__icon' + (tone ? ' stat__icon--' + tone : ''));
@@ -819,6 +1152,7 @@
     const figure = el('div', 'stat__value');
     figure.appendChild(el('span', null, value));
     if (unit) figure.appendChild(el('small', null, unit));
+    if (key) figure.appendChild(el('span', 'stat__key', key));
     body.appendChild(figure);
     card.appendChild(body);
 
@@ -850,54 +1184,201 @@
   function sendButton(text) {
     const button = el('button', 'send-btn');
     button.type = 'button';
-    const icon = el('span');
+
+    const rest = el('span', 'send-btn__layer send-btn__rest');
+    const icon = el('span', 'send-btn__ic');
     icon.innerHTML = ICON_COPY;
-    const words = el('span', null, 'Copy Dimensions & Weight');
-    button.append(icon, words);
+    const words = el('span', 'send-btn__words', 'Copy Dimensions & Weight');
+    rest.append(icon, words);
+
+    const done = el('span', 'send-btn__layer send-btn__done');
+    done.setAttribute('aria-hidden', 'true');
+    const tick = el('span', 'send-btn__ic');
+    tick.innerHTML = ICON_DONE;
+    const copied = el('span', 'send-btn__words', 'Copied');
+    done.append(tick, copied);
+
+    button.append(rest, done);
+
+    const GAP = 9;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    let busy = false;
 
     button.addEventListener('click', async () => {
+      if (busy) return;
       const ok = await writeClipboard(text);
-      icon.innerHTML = ok ? ICON_DONE : ICON_COPY;
-      words.textContent = ok ? 'Copied' : 'Copy failed — select it by hand';
-      button.classList.toggle('is-done', ok);
-      clearTimeout(button._revert);
-      button._revert = setTimeout(() => {
-        icon.innerHTML = ICON_COPY;
-        words.textContent = 'Copy Dimensions & Weight';
-        button.classList.remove('is-done');
-      }, 1600);
+
+      if (!ok) {
+        words.textContent = 'Copy failed — select it by hand';
+        button.classList.add('is-fail');
+        clearTimeout(button._revert);
+        button._revert = setTimeout(() => {
+          words.textContent = 'Copy Dimensions & Weight';
+          button.classList.remove('is-fail');
+        }, 1600);
+        return;
+      }
+
+      busy = true;
+      // how far the icon travels to reach the middle, and how far the tick sits
+      // right of centre before "Copied" joins it
+      button.style.setProperty('--mid', ((words.offsetWidth + GAP) / 2) + 'px');
+      button.style.setProperty('--half', ((copied.offsetWidth + GAP) / 2) + 'px');
+
+      button.classList.add('is-copying');
+      await wait(460);            // words out (160) + icon travelling (260) + slack
+      button.classList.add('is-ticked');
+      await wait(420);            // icon out (140) + tick in (150 + 200) + slack
+      button.classList.add('is-labelled');
+      await wait(1200);
+      button.classList.remove('is-copying', 'is-ticked', 'is-labelled');
+      button.classList.add('is-leaving');
+      await wait(420);
+      button.classList.remove('is-leaving');
+      busy = false;
     });
 
     return button;
   }
 
+  /* How the load is made up, model by model, as one bar: each model takes
+     its share of the cartons, coloured, with its name and share beneath, and
+     the rest of its figures in a small card on hover. */
+  /* Colours that stand against the purple rather than in it — each with a
+     note of whether its percent reads better dark or light. */
+  const SHARE_COLOURS = [
+    ['#22c7b0', '#fff'], ['#f5b342', '#3a2600'], ['#ff6f91', '#fff'],
+    ['#5aa9ff', '#fff'], ['#b6e02e', '#243300'], ['#e879f9', '#fff']
+  ];
+
+  function shareBar(pallet) {
+    const wrap = el('div', 'share');
+    const bar = el('div', 'share__bar');
+    const names = el('div', 'share__names');
+    const tip = el('div', 'share__tip');
+    tip.hidden = true;
+    wrap.append(bar, names, tip);
+
+    let run = 0;
+    pallet.rows.forEach((row, i) => {
+      const [colour, ink] = SHARE_COLOURS[i % SHARE_COLOURS.length];
+      const share = row.cartons / pallet.cartons;
+      const pct = (share * 100).toFixed(share < .1 ? 1 : 0) + '%';
+
+      const seg = el('span', 'share__seg');
+      seg.style.flexGrow = String(row.cartons);
+      seg.style.background = colour;
+      seg.style.color = ink;
+      seg.setAttribute('aria-label', row.product.product_id + ' ' + pct);
+      seg.appendChild(el('span', 'share__pct', pct));
+      bar.appendChild(seg);
+
+      // the name hangs below, tilted, from the middle of its share, so even
+      // a sliver of a share is named; the family prefix says nothing here
+      const name = el('span', 'share__name', row.product.product_id.replace(/^PC-HD-/, ''));
+      name.style.left = ((run + share / 2) * 100) + '%';
+      name.style.color = colour;
+      names.appendChild(name);
+      run += share;
+
+      const show = at => {
+        tip.innerHTML = '';
+        const head = el('div', 'share__tip-head');
+        const d = el('i', 'share__dot'); d.style.background = colour;
+        head.append(d, el('b', null, row.product.product_id));
+        tip.appendChild(head);
+        const grid = el('div', 'share__tip-grid');
+        [['Capacity', row.product.capacity + ' TB'], ['HDD units', String(row.drives)], ['Cartons', String(row.cartons)], ['Weight', row.weight + ' ' + SEND_UNIT], ['Share', pct]]
+          .forEach(([k, v]) => { grid.append(el('span', null, k), el('b', null, v)); });
+        tip.appendChild(grid);
+        tip.hidden = false;
+        const box = wrap.getBoundingClientRect(), a = at.getBoundingClientRect();
+        const x = a.left - box.left + a.width / 2;
+        tip.style.left = Math.max(0, Math.min(x - tip.offsetWidth / 2, box.width - tip.offsetWidth)) + 'px';
+        requestAnimationFrame(() => tip.classList.add('is-in'));
+      };
+      const hide = () => { tip.classList.remove('is-in'); clearTimeout(tip._t); tip._t = setTimeout(() => { tip.hidden = true; }, 160); };
+      [seg, name].forEach(node => {
+        node.addEventListener('pointerenter', () => { clearTimeout(tip._t); show(node); });
+        node.addEventListener('pointerleave', hide);
+      });
+    });
+    return wrap;
+  }
+
+  /* Before anything is calculated the side column says what it will hold. */
+  function renderIdle() {
+    side.innerHTML = '';
+    const hero = el('div', 'side-hero card is-idle');
+    const art = el('div', 'side-hero__art');
+    art.innerHTML = ART_EMPTY_PALLET;
+    hero.appendChild(art);
+    hero.appendChild(el('h2', 'side-hero__title', 'Build Your Pallet'));
+    hero.appendChild(el('p', 'side-hero__copy',
+      'No products selected. Add a drive and HDD units to calculate pallet dimensions and shipping weight.'));
+    side.appendChild(hero);
+  }
+
+  function heroRow(icon, tone, label, value, unit, key, copyLabel, copyValue) {
+    const row = el('div', 'side-hero__row');
+    const badge = el('span', 'stat__icon' + (tone ? ' stat__icon--' + tone : ''));
+    badge.innerHTML = icon;
+    row.appendChild(badge);
+    const body = el('div', 'side-hero__body');
+    body.appendChild(el('div', 'stat__label', label));
+    const figure = el('div', 'side-hero__value');
+    figure.appendChild(el('span', null, value));
+    if (unit) figure.appendChild(el('small', null, unit));
+    if (key) figure.appendChild(el('span', 'stat__key', key));
+    body.appendChild(figure);
+    row.appendChild(body);
+    row.appendChild(copyButton(copyLabel, copyValue));
+    return row;
+  }
+
   function renderPallet(pallet) {
     out.innerHTML = '';
+    side.innerHTML = '';
+    stage.innerHTML = '';
 
     const dims = pallet.length + ' × ' + pallet.width + ' × ' + pallet.height;
 
-    const wire = el('section', 'wire');
+    /* the answer, as a card of its own: the two figures logistics asks for,
+       and the button that hands them over */
+    const hero = el('div', 'side-hero card');
+    hero.appendChild(el('h2', 'side-hero__title', 'Pallet Specs'));
+    hero.appendChild(shareBar(pallet));
+    hero.appendChild(heroRow(ICON_BOX, null, 'Pallet Dimensions', dims, 'in', 'L × W × H',
+                             'dimensions', pallet.length + ' x ' + pallet.width + ' x ' + pallet.height));
+    hero.appendChild(heroRow(ICON_SCALE, 'amber', 'Total Weight', String(pallet.weight), SEND_UNIT, null,
+                             'total weight', String(pallet.weight)));
+    const cta = el('div', 'side-hero__cta');
+    cta.appendChild(sendButton(sendText(pallet)));
+    hero.appendChild(cta);
+    side.appendChild(hero);
 
-    // the message for logistics sits above the figures it carries
-    const send = el('div', 'wire__send');
-    send.appendChild(sendButton(sendText(pallet)));
-    wire.appendChild(send);
+    const counts = el('div', 'side-stats');
+    counts.appendChild(statCard(ICON_CARTON, 'kraft', 'Total Cartons', String(pallet.cartons), 'bxs.'));
+    counts.appendChild(statCard(ICON_DRIVES, 'slate', 'Total HDD Units', String(pallet.drives)));
+    side.appendChild(counts);
 
-    const headline = el('div', 'wire__rows');
-    headline.appendChild(statCard(ICON_BOX, null, 'Pallet Dimensions (L × W × H)', dims, 'in',
-                                  'dimensions', pallet.length + ' x ' + pallet.width + ' x ' + pallet.height));
-    headline.appendChild(statCard(ICON_SCALE, 'amber', 'Total Weight', String(pallet.weight), SEND_UNIT,
-                                  'total weight', String(pallet.weight)));
-    wire.appendChild(headline);
-    out.appendChild(wire);
-
-    const card = el('div', 'card');
-    const specs = el('dl', 'specs');
-    specs.appendChild(pair('Total Cartons', pallet.cartons + ' × (' + BOX.length + ' × ' + BOX.width + ' × ' + BOX.height + ' in)'));
-    specs.appendChild(pair('HDD Units', String(pallet.drives)));
-    card.appendChild(specs);
+    /* the load itself, in the bay */
+    const bay = el('div', 'bay');
+    const head = el('div', 'bay__head');
+    const plate = el('div', 'bay__plate');
+    const l1 = el('div', 'bay__line');
+    l1.append(el('span', 'bay__key', 'Dimensions'), el('b', null, dims + ' in'));
+    const l2 = el('div', 'bay__line');
+    l2.append(el('span', 'bay__key', 'Weight'), el('b', null, pallet.weight + ' ' + SEND_UNIT));
+    plate.append(l1, l2);
+    head.appendChild(plate);
+    bay.appendChild(head);
+    const view = makePalletView();
+    bay.appendChild(view.stage);
+    stage.appendChild(bay);
 
     /* per-product breakdown */
+    const card = el('div', 'card');
     const table = el('table', 'breakdown');
     const thead = el('thead');
     const hrow = el('tr');
@@ -912,7 +1393,16 @@
       tr.appendChild(cell('td', row.product.product_id, 'id'));
       tr.appendChild(cell('td', String(row.drives)));
       tr.appendChild(cell('td', String(row.cartons)));
-      tr.appendChild(cell('td', String(row.product.weight)));
+
+      const each = el('td');
+      const box = el('div', 'with-copy');
+      box.appendChild(el('span', null, String(row.product.weight)));
+      const cp = copyButton('weight', String(row.product.weight), null, 'Copy');
+      cp.classList.add('copy--brief');
+      box.appendChild(cp);
+      each.appendChild(box);
+      tr.appendChild(each);
+
       tr.appendChild(cell('td', String(row.weight)));
       tbody.appendChild(tr);
     });
@@ -927,17 +1417,11 @@
     frow.appendChild(cell('td', String(pallet.weight)));
     tfoot.appendChild(frow);
     table.appendChild(tfoot);
-    const split = el('div', 'detail-split');
-    const left = el('div', 'pane');
-    left.appendChild(table);
-    split.appendChild(left);
+    card.appendChild(table);
+    side.appendChild(card);
 
-    const view = makePalletView();
-    split.appendChild(view.stage);
-    card.appendChild(split);
-
-    out.appendChild(card);
     view.show(pallet);
+    reveal([hero, ...counts.children, card, bay]);
   }
 
   function pair(label, value) {

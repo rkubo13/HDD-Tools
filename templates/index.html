@@ -25,14 +25,17 @@
     result.innerHTML = '<p class="empty">No drive data loaded. Check that hdd.json sits next to app.py and contains valid JSON, then reload.</p>';
   } else {
     const chosen = [];          // products in the order they were picked
+    const shown = [];           // what the results below are actually showing
     let editing = -1;           // nothing is armed to be overwritten until a chip is clicked
     let restoreTo = null;       // where the ring goes back to if + is dismissed
-    let searchedOnce = false;   // the first pick of a visit searches on its own
 
     const picker = createPicker({
       variant: 'composer',
       searchPlaceholder: 'Search by capacity, product ID, or SKU',
       onSelect: p => add(p),
+      marked: p => chosen.some(c => c.product_id === p.product_id),
+      stayOpen: true,
+      onOpen: () => armAdd(true),
       onClose: picked => {
         // + was pressed but nothing came of it: put the ring back where it was
         if (!picked && restoreTo !== null) {
@@ -40,6 +43,7 @@
           renderPicks();
         }
         restoreTo = null;
+        armAdd(false);
       }
     });
     slot.appendChild(picker.root);
@@ -47,32 +51,55 @@
     /* control row: add another, clear, send */
     const addBtn = iconButton('Add another drive', ICON_PLUS, e => {
       e.stopPropagation();      // or the document handler closes it right back
+      // once it has turned, the same button folds the list back up
+      if (picker.isOpen) { picker.close(false); return; }
       if (restoreTo === null) restoreTo = editing;
       editing = -1;             // + means the next pick joins the list
       renderPicks();
       picker.open(true);
-    }, 'icon-btn icon-btn--round tip--left');
-    addBtn.hidden = true;
+    }, 'icon-btn icon-btn--toggle');
+    const setAddWord = wordy(addBtn, 'Add drive');
 
-    const clearBtn = iconButton('Clear', ICON_CROSS, () => {
+    /* the plus turns into the cross that closes the list, and back again */
+    function armAdd(open) {
+      addBtn.classList.toggle('is-x', open);
+      const word = open ? 'Close list' : 'Add drive';
+      setAddWord(word);
+      addBtn.setAttribute('aria-label', word);
+    }
+
+    const clearBtn = clearControl('Clear', 'Cleared', () => {
       chosen.length = 0;
+      shown.length = 0;
+      copied.clear();
       editing = -1;
-      searchedOnce = false;
       picker.clear();
       renderPicks();
       renderHint();
       picker.field.focus();
-    }, 'icon-btn icon-btn--quiet');
+    });
 
-    const sendBtn = iconButton('Send', ICON_ARROW, () => {
+    const sendBtn = sendControl('Send', 'Sent', () => {
       if (chosen.length) {
-        renderResults();
+        commit();
+        renderResults(true);
         flashSent(sendBtn);
-      } else {
-        picker.takeFirst();
-        if (chosen.length) flashSent(sendBtn);
+        picker.close(false);       // sending ends the run of picks
+        return;
       }
-    }, 'icon-btn icon-btn--send');
+
+      // nothing picked: take a typed match if there is one, otherwise say so
+      if (picker.takeFirst()) {
+        commit();
+        renderResults(true);
+        flashSent(sendBtn);
+        picker.close(false);
+        return;
+      }
+
+      notice('Select a drive before sending.');
+      picker.open(true);
+    });
 
     picker.bar.append(addBtn, el('span', 'spacer'), clearBtn, sendBtn);
 
@@ -81,6 +108,246 @@
     picks.hidden = true;
     picker.root.appendChild(picks);
 
+    /* ---------- view and sort ---------- */
+
+    const copied = new Set();     // weights already entered into the system
+    let justCopied = null;        // the one to animate on this render
+    let view = 'standard';
+    let sortMode = 'picked';      // the order they were chosen in
+    let sortWay = 'asc';
+
+    const ICON_SORT = '<svg width="15" height="15" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
+      + '<path d="M3 4.8h12M4.8 9h8.4M7.2 13.2h3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    const ICON_TICK = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">'
+      + '<path d="M3 8.4l3.1 3.1L13 4.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    const SORTS = [
+      ['picked', 'Selection Order'],
+      ['capacity', 'Capacity'],
+      ['weight', 'Weight'],
+      ['type', 'Type']
+    ];
+    const WAYS = [['asc', 'Ascending'], ['desc', 'Descending']];
+
+    /* What tells two drives of one capacity apart: Pro, or the SKU's own
+       suffix — 33PURZ against 34PURZ. */
+    function qualifier(product) {
+      if (product.is_pro) return 'Pro';
+      const shared = PRODUCTS.filter(p => p.capacity === product.capacity).length > 1;
+      if (!shared) return '';
+      const tail = String(product.sku).match(/(\d+[A-Za-z]+)$/);
+      return tail ? tail[1] : '';
+    }
+
+    function markCopied(product) {
+      copied.add(product.product_id);
+      justCopied = product.product_id;
+      renderResults();
+      justCopied = null;
+    }
+
+    function weightButton(product) {
+      const button = copyButton('weight', String(product.weight));
+      button.classList.add('copy--brief');
+      button.addEventListener('click', () => markCopied(product));
+      // copying redraws the list, so the pressed button is gone before its tick
+      // can show; its replacement picks the tick up, a frame late so it fades in
+      if (product.product_id === justCopied) requestAnimationFrame(() => button.showDone());
+      return button;
+    }
+
+    // the digits inside a SKU, which is what separates drives of one capacity
+    function skuNumber(product) {
+      const digits = String(product.sku).match(/\d+/);
+      return digits ? parseInt(digits[0], 10) : 0;
+    }
+
+    /* Each order runs its terms until one of them decides, so drives that tie on
+       the heading a list is sorted by still come out in a settled order: two
+       drives of the same weight fall back to capacity, which puts 4 TB above
+       6 TB when both cartons weigh the same. Selection order does no sorting. */
+    const ORDERS = {
+      capacity: (a, b) =>
+        (a.capacity - b.capacity) || (a.is_pro - b.is_pro) || (skuNumber(a) - skuNumber(b)),
+      weight: (a, b) =>
+        (a.weight - b.weight) || (a.capacity - b.capacity) || (a.is_pro - b.is_pro)
+          || (skuNumber(a) - skuNumber(b)),
+      type: (a, b) =>
+        (a.is_pro - b.is_pro) || (a.capacity - b.capacity) || (skuNumber(a) - skuNumber(b))
+    };
+
+    function inOrder() {
+      const list = shown.slice();
+      const order = ORDERS[sortMode];
+      if (order) list.sort(order);
+      return sortWay === 'desc' ? list.reverse() : list;
+    }
+
+    /* the bar above the results, built once and reused */
+    const toolbar = el('div', 'toolbar');
+
+    const segmented = el('div', 'segmented');
+    segmented.appendChild(el('span', 'segmented__thumb'));
+    const viewButtons = [['standard', 'Standard'], ['compact', 'Compact']].map(([key, label]) => {
+      const button = el('button', 'segmented__opt' + (key === view ? ' is-on' : ''), label);
+      button.type = 'button';
+      button.addEventListener('click', () => {
+        if (view === key) return;
+        view = key;
+        viewButtons.forEach(other => other.classList.toggle('is-on', other.dataset.view === view));
+        segmented.classList.toggle('is-second', view === 'compact');
+        renderResults();
+      });
+      button.dataset.view = key;
+      segmented.appendChild(button);
+      return button;
+    });
+    toolbar.appendChild(segmented);
+
+    const sorter = el('div', 'sorter');
+    const sortBtn = el('button', 'sorter__btn');
+    sortBtn.type = 'button';
+    sortBtn.setAttribute('aria-haspopup', 'true');
+    sortBtn.setAttribute('aria-expanded', 'false');
+    sortBtn.setAttribute('aria-label', 'Sort');
+    const sortIcon = el('span');
+    sortIcon.innerHTML = ICON_SORT;
+
+    /* "Sort: <name> <arrow>". The name sits in a clipped slot so a new one can
+       drop in from above as the old one drops out below; the arrow is a head
+       and a leg drawn apart, so the leg can retract and regrow around a turn. */
+    const sortText = el('span', 'sorter__text');
+    const sortName = el('span', 'sorter__name');
+    const nameSlot = el('span', 'sorter__slot');
+    nameSlot.appendChild(sortName);
+    const sortDir = el('span', 'sorter__dir');
+    sortDir.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">'
+      + '<g class="arrow">'
+      + '<path d="M4.5 6.5 8 3l3.5 3.5M8 3v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+      + '<path class="arrow__leg" d="M8 8v5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
+      + '</g></svg>';
+    sortText.append(document.createTextNode('Sort:'), nameSlot, sortDir);
+    sortBtn.append(sortIcon, sortText);
+    sorter.appendChild(sortBtn);
+
+    const sortMenu = el('div', 'sortmenu');
+    sortMenu.hidden = true;
+    sorter.appendChild(sortMenu);
+    toolbar.appendChild(sorter);
+
+    function sortOption(label, on, onPick) {
+      const option = el('button', 'sortopt' + (on ? ' is-on' : ''));
+      option.type = 'button';
+      const tick = el('span', 'tick');
+      tick.innerHTML = ICON_TICK;
+      option.append(tick, document.createTextNode(label));
+      option.addEventListener('click', e => { e.stopPropagation(); onPick(); });
+      return option;
+    }
+
+    function renderSortMenu() {
+      sortMenu.innerHTML = '';
+      sortMenu.appendChild(el('div', 'sortmenu__label', 'Sort By'));
+      SORTS.forEach(([key, label]) => {
+        sortMenu.appendChild(sortOption(label, sortMode === key, () => {
+          if (sortMode === key) return;
+          sortMode = key;
+          touched = true;
+          swapName(label);
+          refreshSort();
+        }));
+      });
+      sortMenu.appendChild(el('hr'));
+      sortMenu.appendChild(el('div', 'sortmenu__label', 'Direction'));
+      WAYS.forEach(([key, label]) => {
+        sortMenu.appendChild(sortOption(label, sortWay === key, () => {
+          if (sortWay === key) return;
+          sortWay = key;
+          touched = true;
+          turnArrow(key === 'desc');
+          refreshSort();
+        }));
+      });
+    }
+
+    /* The old name drops out below as the new one drops in from above, the two
+       never sharing the slot: the incoming one starts a full line up. */
+    function swapName(label) {
+      const old = nameSlot.querySelector('.sorter__name');
+      const next = el('span', 'sorter__name is-above', label);
+      nameSlot.appendChild(next);
+      void next.offsetWidth;
+      old.classList.add('is-below');
+      next.classList.remove('is-above');
+      // size the pill for the incoming name now — the slot is as wide as the
+      // wider of the two while they pass, which would hold a shrink back
+      sortBtn.style.setProperty('--sort-w', (10 + 15 + 8 + (sortText.scrollWidth - nameSlot.offsetWidth + next.offsetWidth) + 14) + 'px');
+      const gone = () => { if (old.isConnected) old.remove(); };
+      old.addEventListener('transitionend', gone, { once: true });
+      setTimeout(gone, 400);
+    }
+
+    /* The leg retracts to the centre, the whole arrow turns — clockwise on the
+       way to descending, back the other way to ascending — and the leg grows
+       out again on the far side. */
+    function turnArrow(desc) {
+      sortDir.querySelector('.arrow').classList.toggle('is-down', desc);
+    }
+
+    function refreshSort() {
+      // no re-measure here: during a name swap both names share the slot and
+      // the wider one would win, holding a shrink back until the old had gone
+      renderSortMenu();
+      renderResults();
+    }
+
+    // icon, gap, text, then breathing room on the right. Measured again as the
+    // button is reached, since the text is only measurable once it is on the
+    // page and the font may have swapped in since.
+    function measureSort() {
+      if (!sortText.isConnected) return;
+      sortBtn.style.setProperty('--sort-w', (10 + 15 + 8 + sortText.scrollWidth + 14) + 'px');
+    }
+    sortBtn.addEventListener('pointerenter', measureSort);
+    sortBtn.addEventListener('focus', measureSort);
+
+    /* The list stays up while the pointer is in it, whatever is picked, and
+       goes when the pointer leaves — after a moment, so a slip across the edge
+       is forgiven. A click elsewhere closes it too. Once something was changed
+       the button keeps its words a little longer after the list has gone. */
+    let touched = false, leaveTimer = null, holdTimer = null;
+
+    function showSortMenu(open) {
+      sortMenu.hidden = !open;
+      sortBtn.setAttribute('aria-expanded', String(open));
+      if (open) { touched = false; clearTimeout(holdTimer); sortBtn.classList.remove('is-held'); return; }
+      if (touched) {
+        sortBtn.classList.add('is-held');
+        clearTimeout(holdTimer);
+        holdTimer = setTimeout(() => sortBtn.classList.remove('is-held'), 1100);
+      }
+    }
+
+    sortBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      showSortMenu(sortMenu.hidden);
+    });
+    sorter.addEventListener('pointerleave', () => {
+      if (sortMenu.hidden) return;
+      clearTimeout(leaveTimer);
+      leaveTimer = setTimeout(() => showSortMenu(false), 260);
+    });
+    sorter.addEventListener('pointerenter', () => clearTimeout(leaveTimer));
+    document.addEventListener('click', e => {
+      if (!sortMenu.hidden && !sorter.contains(e.target)) showSortMenu(false);
+    });
+    sorter.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !sortMenu.hidden) { showSortMenu(false); sortBtn.focus(); }
+    });
+
+    sortName.textContent = SORTS.find(([key]) => key === sortMode)[1];
+    refreshSort();
+
     renderHint();
     window.addEventListener('pageshow', () => picker.close(false));
 
@@ -88,8 +355,12 @@
       const already = chosen.findIndex(p => p.product_id === product.product_id);
 
       if (already > -1) {
-        // already listed: leave the list alone rather than doubling it up
-      } else if (editing > -1 && editing < chosen.length) {
+        // picking a listed drive again takes it off the list
+        drop(product.product_id);
+        return;
+      }
+
+      if (editing > -1 && editing < chosen.length) {
         chosen[editing] = product;                  // a chip was clicked, so replace it
         editing = -1;                               // and go back to arming nothing
       } else {
@@ -97,12 +368,14 @@
       }
 
       renderPicks();
+    }
 
-      // the first drive of a visit goes straight to a result; after that, Send does it
-      if (!searchedOnce) {
-        searchedOnce = true;
-        renderResults();
-      }
+    /* Picking a drive only fills the chip row. What the results show is settled
+       here, by Send alone, so a pick never turns up in the results on its own
+       the next time something else redraws the list. */
+    function commit() {
+      shown.length = 0;
+      chosen.forEach(product => shown.push(product));
     }
 
     function drop(productId) {
@@ -110,14 +383,18 @@
       if (at > -1) chosen.splice(at, 1);
       if (at === editing) editing = -1;
       else if (at < editing) editing -= 1;
+
+      // a drive taken off the list goes from the results too, sent or not
+      const was = shown.findIndex(p => p.product_id === productId);
+      if (was > -1) shown.splice(was, 1);
+
       renderPicks();
-      if (chosen.length) renderResults();
-      else { searchedOnce = false; renderHint(); }
+      if (shown.length) renderResults();
+      else renderHint();
     }
 
     function renderPicks() {
       picks.innerHTML = '';
-      addBtn.hidden = chosen.length === 0;
       picks.hidden = chosen.length === 0;
       if (!chosen.length) return;
 
@@ -149,7 +426,7 @@
         off.type = 'button';
         off.innerHTML = ICON_CROSS;
         off.setAttribute('aria-label', 'Remove ' + product.product_id);
-        off.addEventListener('click', () => drop(product.product_id));
+        off.addEventListener('click', () => { drop(product.product_id); picker.refresh(); });
         chip.appendChild(off);
 
         picks.appendChild(chip);
@@ -157,7 +434,16 @@
     }
 
     function renderHint() {
-      result.innerHTML = '<p class="hint">The weight, product ID and SKU show up here once you pick a drive.</p>';
+      result.innerHTML = '';
+
+      const blank = el('div', 'blank');
+      const art = el('div', 'blank__art');
+      art.innerHTML = EMPTY_ART;
+      blank.appendChild(art);
+      blank.appendChild(el('p', null,
+        'Select and submit HDD model to view weight, Product ID, and SKU.'));
+
+      result.appendChild(blank);
     }
 
     function spec(label, value, mono, copyable) {
@@ -172,13 +458,115 @@
       return div;
     }
 
-    function renderResults() {
-      result.innerHTML = '';
-      chosen.forEach(product => result.appendChild(driveCard(product)));
+    const resultBody = el('div', 'result__body');
+
+    /* fresh is true only when Send (or the first pick) produced these results;
+       every other redraw leaves the list where it is */
+    function renderResults(fresh) {
+      const list = inOrder();
+      if (!list.length) { renderHint(); return; }
+
+      // The toolbar is placed once and left alone. Taking it out and putting it
+      // back would drop the view pill's slide, which only runs on an element
+      // that stayed in the document across the change.
+      if (toolbar.parentNode !== result) {
+        result.innerHTML = '';
+        result.append(toolbar, resultBody);
+        measureSort();
+      }
+
+      resultBody.innerHTML = '';
+      if (view === 'compact') resultBody.appendChild(compactList(list));
+      else list.forEach(product => {
+        const slot = el('div', 'card-slot');
+        slot.appendChild(driveCard(product));
+        if (copied.has(product.product_id)) {
+          // the one just copied starts full width so the tuck is seen
+          if (product.product_id === justCopied) requestAnimationFrame(() => slot.classList.add('is-copied'));
+          else slot.classList.add('is-copied');
+        }
+        if (product.product_id === justCopied) press(slot);
+        resultBody.appendChild(slot);
+      });
+
+      if (fresh) reveal(resultBody.querySelectorAll(view === 'compact' ? '.crow' : '.card-slot'));
     }
 
+    /* one line per drive, so a long list needs little scrolling. Rows in the
+       same copied state sit together in one bubble, which is what makes a run
+       merge, and a single copied row split the list in two. */
+    function compactList(list) {
+      const wrap = el('div', 'compact');
+
+      const head = el('div', 'compact__head');
+      ['Capacity', 'Product ID', 'SKU', 'Weight'].forEach(label => head.appendChild(el('span', null, label)));
+      wrap.appendChild(head);
+
+      let at = 0;
+      while (at < list.length) {
+        const state = copied.has(list[at].product_id);
+        const group = el('div', 'card compact__group');
+        let holdsTheNewOne = false;
+
+        while (at < list.length && copied.has(list[at].product_id) === state) {
+          if (list[at].product_id === justCopied) holdsTheNewOne = true;
+          group.appendChild(compactRow(list[at]));
+          at++;
+        }
+
+        if (state) {
+          // the group that just changed starts unscaled so the shrink is seen
+          if (holdsTheNewOne) requestAnimationFrame(() => group.classList.add('is-copied'));
+          else group.classList.add('is-copied');
+        }
+
+        wrap.appendChild(group);
+      }
+
+      return wrap;
+    }
+
+    function compactRow(product) {
+      const row = el('div', 'crow');
+      if (product.product_id === justCopied) press(row);
+
+      const cap = el('div', 'crow__cap');
+      cap.appendChild(el('b', null, product.capacity + ' TB'));
+      const extra = qualifier(product);
+      if (extra) cap.appendChild(el('span', null, extra));
+      row.appendChild(cap);
+
+      const id = el('div', 'cell cell--id');
+      id.appendChild(el('span', null, product.product_id));
+      id.appendChild(copyButton('Product ID', product.product_id));
+      row.appendChild(id);
+
+      const sku = el('div', 'cell cell--sku');
+      sku.appendChild(el('span', null, product.sku));
+      sku.appendChild(copyButton('SKU', product.sku));
+      row.appendChild(sku);
+
+      const weight = el('div', 'cell cell--weight');
+      const figure = el('span', null, String(product.weight));
+      figure.appendChild(el('small', null, ' ' + UNIT));
+      weight.appendChild(figure);
+      weight.appendChild(weightButton(product));
+      row.appendChild(weight);
+
+      return row;
+    }
+
+    const ICON_CHECK_SMALL = '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">'
+      + '<path d="M3 8.4l3.1 3.1L13 4.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
     function driveCard(product) {
+      const taken = copied.has(product.product_id);
       const card = el('div', 'card');
+      if (taken) {
+        // the one just copied starts plain so the tint and the tag can arrive
+        if (product.product_id === justCopied) requestAnimationFrame(() => card.classList.add('is-copied'));
+        else card.classList.add('is-copied');
+      }
 
       const hero = el('div', 'hero');
 
@@ -188,11 +576,18 @@
       const figure = el('div', 'figure');
       figure.appendChild(el('span', null, String(product.weight)));
       figure.appendChild(el('span', null, UNIT));
-      figure.appendChild(copyButton('weight', String(product.weight)));
+      figure.appendChild(weightButton(product));      // marks the drive as taken
       left.appendChild(figure);
       hero.appendChild(left);
 
       const who = el('div', 'who');
+      if (taken) {
+        const tag = el('span', 'copied-tag');
+        const tick = el('span');
+        tick.innerHTML = ICON_CHECK_SMALL;
+        tag.append(tick, document.createTextNode('Copied'));
+        who.appendChild(tag);
+      }
       who.appendChild(el('b', null, product.capacity + ' TB ' + (product.is_pro ? 'Pro' : 'Standard')));
       who.appendChild(el('span', null, product.sku));
       hero.appendChild(who);
@@ -203,7 +598,6 @@
       specs.appendChild(spec('SKU', product.sku, true, true));
       specs.appendChild(spec('Capacity', product.capacity + ' TB'));
       if (product.type) specs.appendChild(spec('Type', product.type));
-      specs.appendChild(spec('Weight', product.weight + ' ' + UNIT));
       card.appendChild(specs);
 
       return card;
