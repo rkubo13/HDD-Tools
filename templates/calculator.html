@@ -1169,19 +1169,28 @@
      character column so the values line up in plain Google Chat text. */
   const LEADER_COLUMN = 48;
 
-  function leaderLine(label, value) {
-    let line = label + ' ';
-    while (line.length + 3 <= LEADER_COLUMN) line += '.  ';   // whole dots only
-    return line.padEnd(LEADER_COLUMN, ' ') + value;
+  function leaders(label) {
+    let run = label + ' ';
+    while (run.length + 3 <= LEADER_COLUMN) run += '.  ';     // whole dots only
+    return run.slice(label.length).padEnd(LEADER_COLUMN - label.length, ' ');
   }
 
+  /* Two versions of the same two lines: plain text for anything that takes
+     only text, and the same with the labels in bold for chat and mail that
+     paste rich text. The leaders are identical in both. */
   function sendText(pallet) {
-    const dims = pallet.length + ' x ' + pallet.width + ' x ' + pallet.height + ' in';
-    return leaderLine('Pallet Dimensions (L x W x H)', dims) + '\n'
-         + leaderLine('Total Weight', pallet.weight + ' ' + SEND_UNIT);
+    const rows = [
+      ['Pallet Dimensions (L x W x H):', pallet.length + ' x ' + pallet.width + ' x ' + pallet.height + ' in'],
+      ['Total Weight:', pallet.weight + ' ' + SEND_UNIT]
+    ];
+    const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    return {
+      text: rows.map(([label, value]) => label + leaders(label) + value).join('\n'),
+      html: rows.map(([label, value]) => '<b>' + esc(label) + '</b>' + esc(leaders(label)).replace(/ /g, '&nbsp;') + esc(value)).join('<br>')
+    };
   }
 
-  function sendButton(text) {
+  function sendButton(message) {
     const button = el('button', 'send-btn');
     button.type = 'button';
 
@@ -1206,7 +1215,7 @@
 
     button.addEventListener('click', async () => {
       if (busy) return;
-      const ok = await writeClipboard(text);
+      const ok = await writeClipboardRich(message.text, message.html);
 
       if (!ok) {
         words.textContent = 'Copy failed — select it by hand';
