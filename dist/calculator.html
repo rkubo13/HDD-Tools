@@ -4851,8 +4851,8 @@
      paste rich text. The leaders are identical in both. */
   function sendText(pallet) {
     const rows = [
-      ['Pallet Dimensions (L x W x H):', pallet.length + ' x ' + pallet.width + ' x ' + pallet.height + ' in'],
-      ['Total Weight:', pallet.weight + ' ' + SEND_UNIT]
+      ['Pallet Dimensions (L x W x H)', pallet.length + ' x ' + pallet.width + ' x ' + pallet.height + ' in'],
+      ['Total Weight', pallet.weight + ' ' + SEND_UNIT]
     ];
     const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
     return {
